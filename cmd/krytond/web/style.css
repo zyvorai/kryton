@@ -99,6 +99,8 @@ footer{text-align:center;color:var(--faint);font-size:9px;padding:28px 0 8px}foo
 .apple-image-card:hover{transform:translateY(-3px);box-shadow:0 20px 50px rgba(0,0,0,.12)}
 .apple-image-card.selectable{cursor:pointer}
 .apple-image-card.selected{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 35%,transparent),0 22px 55px rgba(0,0,0,.14)}
+.apple-image-card.disabled{opacity:.48;cursor:not-allowed;pointer-events:none}
+.create-image-hint{margin:10px 0 0;color:var(--soft);font-size:12px;line-height:1.45;font-weight:500}
 .apple-image-icon{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:#fff;background:linear-gradient(145deg,#ff5a15,#cc420a);box-shadow:0 6px 16px rgba(255,90,21,.16);margin-bottom:14px}.apple-image-icon .sf-icon{width:16px;height:16px;color:#fff}
 .apple-image-card.server .apple-image-icon{background:linear-gradient(145deg,#2a2a30,#141418)}
 .apple-image-kicker{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}

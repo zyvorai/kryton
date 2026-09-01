@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/zyvorai/kryton/internal/auth"
@@ -103,6 +104,7 @@ type errorEnvelope struct {
 type APIError struct {
 	Code      string `json:"code"`
 	Message   string `json:"message"`
+	Hint      string `json:"hint,omitempty"`
 	RequestID string `json:"requestId,omitempty"`
 }
 
@@ -286,6 +288,20 @@ func (s *Server) createMachine(w http.ResponseWriter, r *http.Request) {
 	if req.Compute.CPU < img.MinCPU || req.Compute.MemoryMiB < img.MinMemoryMiB {
 		s.badRequest(w, r, fmt.Sprintf("image requires at least %d CPU and %d MiB memory", img.MinCPU, img.MinMemoryMiB))
 		return
+	}
+	if s.inventory != nil {
+		for _, invImg := range s.inventory.Enrich(r.Context(), s.catalog) {
+			if invImg.ID != req.Image {
+				continue
+			}
+			if !invImg.Ready {
+				s.writeAPIError(w, r, http.StatusBadRequest, "IMAGE_NOT_READY",
+					fmt.Sprintf("image %q is not ready to deploy (%s)", req.Image, invImg.Availability),
+					fmt.Sprintf("Build a golden image or bootstrap a CDI DataSource in %s (docs/GOLDEN-IMAGES.md). Until then only Stored/on-demand images can be created.", firstNonEmptyStr(s.imageNamespace, "kryton-images")))
+				return
+			}
+			break
+		}
 	}
 	m, err := s.p.Create(r.Context(), req.Project, req.MachineSpec)
 	if err != nil {
@@ -509,26 +525,26 @@ func (s *Server) projectConfigured(project string) bool {
 }
 
 func (s *Server) writeErr(w http.ResponseWriter, r *http.Request, err error) {
-	switch {
-	case errors.Is(err, provider.ErrNotFound):
-		s.writeAPIError(w, r, http.StatusNotFound, "NOT_FOUND", "resource not found")
-	case errors.Is(err, provider.ErrConflict):
-		s.writeAPIError(w, r, http.StatusConflict, "CONFLICT", "resource already exists")
-	case errors.Is(err, provider.ErrUnsupported):
-		s.writeAPIError(w, r, http.StatusNotImplemented, "UNSUPPORTED", "operation unsupported")
-	default:
-		s.log.Error("request failed", "request_id", requestID(r.Context()), "error", err)
-		s.writeAPIError(w, r, http.StatusInternalServerError, "INTERNAL", "internal server error")
+	c := classifyError(err)
+	if c.Status >= 500 {
+		s.log.Error("request failed", "request_id", requestID(r.Context()), "code", c.Code, "error", err)
+	} else {
+		s.log.Info("request rejected", "request_id", requestID(r.Context()), "code", c.Code, "error", err)
 	}
+	s.writeAPIError(w, r, c.Status, c.Code, c.Message, c.Hint)
 }
 func (s *Server) badRequest(w http.ResponseWriter, r *http.Request, msg string) {
-	s.writeAPIError(w, r, http.StatusBadRequest, "INVALID_REQUEST", msg)
+	s.writeAPIError(w, r, http.StatusBadRequest, "INVALID_REQUEST", msg, "Correct the request fields and retry.")
 }
 func (s *Server) forbidden(w http.ResponseWriter, r *http.Request) {
-	s.writeAPIError(w, r, http.StatusForbidden, "FORBIDDEN", "you do not have access to this project or operation")
+	s.writeAPIError(w, r, http.StatusForbidden, "FORBIDDEN", "you do not have access to this project or operation", "Use an API key or identity with Operator access to this project.")
 }
-func (s *Server) writeAPIError(w http.ResponseWriter, r *http.Request, status int, code, msg string) {
-	jsonResponse(w, status, errorEnvelope{Error: APIError{Code: code, Message: msg, RequestID: requestID(r.Context())}})
+func (s *Server) writeAPIError(w http.ResponseWriter, r *http.Request, status int, code, msg string, hint ...string) {
+	ae := APIError{Code: code, Message: msg, RequestID: requestID(r.Context())}
+	if len(hint) > 0 {
+		ae.Hint = strings.TrimSpace(hint[0])
+	}
+	jsonResponse(w, status, errorEnvelope{Error: ae})
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {

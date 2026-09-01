@@ -100,6 +100,9 @@ func (p *Provider) Create(ctx context.Context, project string, spec model.Machin
 	if err := EnsureNamespaces(ctx, p.client, p.namespacePrefix, []string{project}); err != nil {
 		return nil, err
 	}
+	if err := EnsureImageCloneAccess(ctx, p.client, p.ImageNamespace(), p.namespacePrefix, []string{project}); err != nil {
+		return nil, fmt.Errorf("ensure CDI clone access: %w", err)
+	}
 	machineID := id.New()
 	ns := p.namespace(project)
 	rootName := trimDNS(spec.Name+"-root", 63)
@@ -143,10 +146,22 @@ func (p *Provider) Create(ctx context.Context, project string, spec model.Machin
 				"spec": map[string]any{
 					"terminationGracePeriodSeconds": 30,
 					"domain": map[string]any{
-						"cpu":      map[string]any{"sockets": 1, "cores": spec.Compute.CPU, "threads": 1},
-						"memory":   map[string]any{"guest": fmt.Sprintf("%dMi", spec.Compute.MemoryMiB)},
-						"features": map[string]any{"acpi": map[string]any{}, "apic": map[string]any{}, "hyperv": map[string]any{"relaxed": map[string]any{}, "vapic": map[string]any{}, "spinlocks": map[string]any{"spinlocks": 8191}}},
-						"devices":  map[string]any{"disks": []any{map[string]any{"name": "root", "disk": map[string]any{"bus": "virtio"}}}, "interfaces": []any{iface}},
+						"cpu":    map[string]any{"sockets": 1, "cores": spec.Compute.CPU, "threads": 1},
+						"memory": map[string]any{"guest": fmt.Sprintf("%dMi", spec.Compute.MemoryMiB)},
+						"firmware": map[string]any{
+							"bootloader": map[string]any{"efi": map[string]any{"secureBoot": false}},
+						},
+						"features": map[string]any{
+							"acpi":   map[string]any{},
+							"apic":   map[string]any{},
+							"smm":    map[string]any{},
+							"hyperv": map[string]any{"relaxed": map[string]any{}, "vapic": map[string]any{}, "spinlocks": map[string]any{"spinlocks": 8191}},
+						},
+						"devices": map[string]any{
+							"disks":      []any{map[string]any{"name": "root", "disk": map[string]any{"bus": "virtio"}}},
+							"interfaces": []any{iface},
+							"tpm":        map[string]any{},
+						},
 					},
 					"networks": []any{network},
 					"volumes":  []any{map[string]any{"name": "root", "dataVolume": map[string]any{"name": rootName}}},

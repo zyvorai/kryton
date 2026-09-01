@@ -446,4 +446,5 @@ components:
           properties:
             code: {type: string}
             message: {type: string}
+            hint: {type: string, description: Action the operator should take next}
             requestId: {type: string}

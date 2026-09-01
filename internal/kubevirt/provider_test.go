@@ -30,6 +30,16 @@ func TestCreateAndLifecycleUsesKubernetesREST(t *testing.T) {
 		case r.Method == "POST" && r.URL.Path == "/api/v1/namespaces":
 			w.WriteHeader(http.StatusCreated)
 			io.WriteString(w, `{"metadata":{"name":"finance"}}`)
+		case r.Method == "GET" && strings.Contains(r.URL.Path, "/roles/"):
+			http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
+		case r.Method == "GET" && strings.Contains(r.URL.Path, "/rolebindings/"):
+			http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
+		case r.Method == "POST" && strings.Contains(r.URL.Path, "/roles"):
+			w.WriteHeader(http.StatusCreated)
+			io.WriteString(w, `{"metadata":{"name":"kryton-datavolume-cloner"}}`)
+		case r.Method == "POST" && strings.Contains(r.URL.Path, "/rolebindings"):
+			w.WriteHeader(http.StatusCreated)
+			io.WriteString(w, `{"metadata":{"name":"kryton-allow-clone-from-finance"}}`)
 		case r.Method == "POST" && r.URL.Path == "/apis/kubevirt.io/v1/namespaces/finance/virtualmachines":
 			_ = json.NewDecoder(r.Body).Decode(&created)
 			created["status"] = map[string]any{"printableStatus": "Starting"}
@@ -105,6 +115,16 @@ func TestSnapshotListRestoreDelete(t *testing.T) {
 		case r.Method == "POST" && r.URL.Path == "/api/v1/namespaces":
 			w.WriteHeader(http.StatusCreated)
 			io.WriteString(w, `{"metadata":{"name":"finance"}}`)
+		case r.Method == "GET" && strings.Contains(r.URL.Path, "/roles/"):
+			http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
+		case r.Method == "GET" && strings.Contains(r.URL.Path, "/rolebindings/"):
+			http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
+		case r.Method == "POST" && strings.Contains(r.URL.Path, "/roles"):
+			w.WriteHeader(http.StatusCreated)
+			io.WriteString(w, `{"metadata":{"name":"kryton-datavolume-cloner"}}`)
+		case r.Method == "POST" && strings.Contains(r.URL.Path, "/rolebindings"):
+			w.WriteHeader(http.StatusCreated)
+			io.WriteString(w, `{"metadata":{"name":"kryton-allow-clone-from-finance"}}`)
 		case r.Method == "POST" && r.URL.Path == "/apis/kubevirt.io/v1/namespaces/finance/virtualmachines":
 			_ = json.NewDecoder(r.Body).Decode(&created)
 			created["status"] = map[string]any{"printableStatus": "Stopped"}

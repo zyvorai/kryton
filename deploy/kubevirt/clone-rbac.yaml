@@ -1,0 +1,28 @@
+# Allow project namespaces to clone CDI DataSources from kryton-images.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kryton-datavolume-cloner
+  namespace: kryton-images
+  labels:
+    app.kubernetes.io/managed-by: kryton
+rules:
+  - apiGroups: ["cdi.kubevirt.io"]
+    resources: ["datavolumes/source"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kryton-allow-clone-from-default
+  namespace: kryton-images
+  labels:
+    app.kubernetes.io/managed-by: kryton
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kryton-datavolume-cloner

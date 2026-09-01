@@ -19,7 +19,7 @@ func (s *Server) machineConsole(w http.ResponseWriter, r *http.Request) {
 	machineID := r.PathValue("id")
 	resolver, ok := s.p.(provider.ConsoleResolver)
 	if !ok {
-		s.writeAPIError(w, r, http.StatusNotImplemented, "UNSUPPORTED", "console is not available for this provider")
+		s.writeAPIError(w, r, http.StatusNotImplemented, "UNSUPPORTED", "console is not available for this provider", "Use the dockur or kubevirt provider with console enabled.")
 		return
 	}
 	target, err := resolver.ConsoleTarget(r.Context(), project, machineID)
@@ -50,12 +50,12 @@ func (s *Server) machineVNC(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.kubeClient == nil {
-		s.writeAPIError(w, r, http.StatusNotImplemented, "UNSUPPORTED", "vnc proxy requires kubevirt provider")
+		s.writeAPIError(w, r, http.StatusNotImplemented, "UNSUPPORTED", "vnc proxy requires kubevirt provider", "Open the web console URL for dockur guests, or use kubevirt for VNC.")
 		return
 	}
 	resolver, ok := s.p.(provider.ConsoleResolver)
 	if !ok {
-		s.writeAPIError(w, r, http.StatusNotImplemented, "UNSUPPORTED", "console is not available for this provider")
+		s.writeAPIError(w, r, http.StatusNotImplemented, "UNSUPPORTED", "console is not available for this provider", "Use the dockur or kubevirt provider with console enabled.")
 		return
 	}
 	target, err := resolver.ConsoleTarget(r.Context(), project, r.PathValue("id"))
@@ -71,7 +71,7 @@ func (s *Server) machineVNC(w http.ResponseWriter, r *http.Request) {
 func (s *Server) proxyWebConsole(w http.ResponseWriter, r *http.Request, upstream, machineID string) {
 	target, err := url.Parse(strings.TrimRight(upstream, "/"))
 	if err != nil || target.Host == "" {
-		s.writeAPIError(w, r, http.StatusBadGateway, "CONSOLE_UNAVAILABLE", "invalid dockur console upstream")
+		s.writeAPIError(w, r, http.StatusBadGateway, "CONSOLE_UNAVAILABLE", "invalid dockur console upstream", "Confirm the dockur Windows container is running and publishing its web console port.")
 		return
 	}
 	prefix := "/api/v1/machines/" + machineID + "/console"

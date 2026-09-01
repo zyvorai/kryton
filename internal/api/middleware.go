@@ -108,7 +108,7 @@ func (s *Server) recoverer(next http.Handler) http.Handler {
 		defer func() {
 			if x := recover(); x != nil {
 				s.log.Error("panic recovered", "panic", x, "stack", string(debug.Stack()), "request_id", requestID(r.Context()))
-				s.writeAPIError(w, r, http.StatusInternalServerError, "INTERNAL", "internal server error")
+				s.writeAPIError(w, r, http.StatusInternalServerError, "INTERNAL", "internal server error", "Unexpected panic — check krytond logs with the request id.")
 			}
 		}()
 		next.ServeHTTP(w, r)

@@ -10,12 +10,40 @@ import (
 	"github.com/zyvorai/kryton/internal/kubeapi"
 )
 
-// EnsureNamespaces creates Kubernetes namespaces for each Kryton project.
+const imageCloneRole = "kryton-datavolume-cloner"
+
+// EnsureNamespaces creates Kubernetes namespaces for each Kryton project and
+// grants CDI DataSource clone access from the image namespace.
 func EnsureNamespaces(ctx context.Context, client *kubeapi.Client, prefix string, projects []string) error {
 	for _, project := range projects {
 		ns := prefix + project
 		if err := ensureNamespace(ctx, client, ns, project); err != nil {
 			return fmt.Errorf("project %q: %w", project, err)
+		}
+	}
+	return nil
+}
+
+// EnsureImageCloneAccess lets each project namespace's default SA clone DataVolumes
+// from imageNamespace (required by CDI when VMs reference a DataSource).
+func EnsureImageCloneAccess(ctx context.Context, client *kubeapi.Client, imageNamespace, prefix string, projects []string) error {
+	imageNamespace = strings.TrimSpace(imageNamespace)
+	if imageNamespace == "" {
+		imageNamespace = "kryton-images"
+	}
+	if err := ensureNamespace(ctx, client, imageNamespace, "images"); err != nil {
+		return err
+	}
+	if err := ensureCloneRole(ctx, client, imageNamespace); err != nil {
+		return err
+	}
+	for _, project := range projects {
+		targetNS := strings.TrimSpace(prefix + project)
+		if targetNS == "" {
+			continue
+		}
+		if err := ensureCloneRoleBinding(ctx, client, imageNamespace, targetNS); err != nil {
+			return fmt.Errorf("clone rbac for %s: %w", targetNS, err)
 		}
 	}
 	return nil
@@ -41,6 +69,64 @@ func ensureNamespace(ctx context.Context, client *kubeapi.Client, ns, project st
 		},
 	}
 	return client.JSON(ctx, http.MethodPost, "/api/v1/namespaces", "application/json", body, nil)
+}
+
+func ensureCloneRole(ctx context.Context, client *kubeapi.Client, imageNS string) error {
+	path := fmt.Sprintf("/apis/rbac.authorization.k8s.io/v1/namespaces/%s/roles/%s", url.PathEscape(imageNS), url.PathEscape(imageCloneRole))
+	var existing map[string]any
+	if err := client.JSON(ctx, http.MethodGet, path, "", nil, &existing); err == nil {
+		return nil
+	} else if !kubeapi.IsNotFound(err) {
+		return err
+	}
+	body := map[string]any{
+		"apiVersion": "rbac.authorization.k8s.io/v1",
+		"kind":       "Role",
+		"metadata": map[string]any{
+			"name":      imageCloneRole,
+			"namespace": imageNS,
+			"labels":    map[string]any{"app.kubernetes.io/managed-by": "kryton"},
+		},
+		"rules": []any{
+			map[string]any{
+				"apiGroups": []any{"cdi.kubevirt.io"},
+				"resources": []any{"datavolumes/source"},
+				"verbs":     []any{"create"},
+			},
+		},
+	}
+	createPath := fmt.Sprintf("/apis/rbac.authorization.k8s.io/v1/namespaces/%s/roles", url.PathEscape(imageNS))
+	return client.JSON(ctx, http.MethodPost, createPath, "application/json", body, nil)
+}
+
+func ensureCloneRoleBinding(ctx context.Context, client *kubeapi.Client, imageNS, targetNS string) error {
+	name := "kryton-allow-clone-from-" + sanitizeDNS(targetNS, 40)
+	path := fmt.Sprintf("/apis/rbac.authorization.k8s.io/v1/namespaces/%s/rolebindings/%s", url.PathEscape(imageNS), url.PathEscape(name))
+	var existing map[string]any
+	if err := client.JSON(ctx, http.MethodGet, path, "", nil, &existing); err == nil {
+		return nil
+	} else if !kubeapi.IsNotFound(err) {
+		return err
+	}
+	body := map[string]any{
+		"apiVersion": "rbac.authorization.k8s.io/v1",
+		"kind":       "RoleBinding",
+		"metadata": map[string]any{
+			"name":      name,
+			"namespace": imageNS,
+			"labels":    map[string]any{"app.kubernetes.io/managed-by": "kryton"},
+		},
+		"subjects": []any{
+			map[string]any{"kind": "ServiceAccount", "name": "default", "namespace": targetNS},
+		},
+		"roleRef": map[string]any{
+			"apiGroup": "rbac.authorization.k8s.io",
+			"kind":     "Role",
+			"name":     imageCloneRole,
+		},
+	}
+	createPath := fmt.Sprintf("/apis/rbac.authorization.k8s.io/v1/namespaces/%s/rolebindings", url.PathEscape(imageNS))
+	return client.JSON(ctx, http.MethodPost, createPath, "application/json", body, nil)
 }
 
 // MissingNamespaces returns project namespaces that do not exist yet.
