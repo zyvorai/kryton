@@ -1,4 +1,4 @@
-.PHONY: run build test race vet fmt check demo image deploy-remote harden-lab bootstrap-kubevirt setup-kubevirt build-golden enable-kubevirt-snapshots enable-rook-ceph
+.PHONY: run build test race vet fmt check demo image deploy-remote harden-lab bootstrap-kubevirt setup-kubevirt setup-kubevirt-production run-kubevirt-production-remote build-golden enable-kubevirt-snapshots enable-rook-ceph
 
 run:
 	go run ./cmd/krytond
@@ -63,6 +63,16 @@ setup-kubevirt:
 	else \
 		KRYTON_WINDOWS_IMAGE="$(IMAGE)" ./scripts/setup-kubevirt.sh $(ARGS); \
 	fi
+
+setup-kubevirt-production:
+	@./scripts/setup-kubevirt-production.sh \
+		$(if $(filter 1,$(BUILD)),--build-golden,) \
+		$(if $(filter 1,$(SKIP)),--skip-create,) \
+		$(if $(filter 1,$(CUSTOMER)),--customer-helm,) \
+		$(if $(IMAGE),--image $(IMAGE),) $(ARGS)
+
+run-kubevirt-production-remote:
+	@./scripts/run-kubevirt-production-remote.sh $(or $(H),175.110.122.71) $(or $(U),sus)
 
 enable-kubevirt-snapshots:
 	./scripts/enable-kubevirt-snapshots.sh $(ARGS)

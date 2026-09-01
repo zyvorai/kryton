@@ -16,6 +16,7 @@ VM_NAME="win11-k8s-01"
 SKIP_CREATE=false
 SKIP_BOOTSTRAP=false
 INSECURE=false
+CUSTOMER_HELM=false
 
 usage() {
   cat <<EOF
@@ -64,6 +65,7 @@ while [ $# -gt 0 ]; do
     --skip-create) SKIP_CREATE=true; shift ;;
     --skip-bootstrap) SKIP_BOOTSTRAP=true; shift ;;
     --insecure) INSECURE=true; shift ;;
+    --customer) CUSTOMER_HELM=true; shift ;;
     *) echo "unknown arg: $1" >&2; usage; exit 1 ;;
   esac
 done
@@ -116,9 +118,13 @@ if [ "${MODE}" = helm ]; then
     docker save kryton:local | sudo k3s ctr images import - >/dev/null
   fi
   echo "→ Installing Helm release"
+  HELM_VALUES="${KRYTON_HELM_VALUES:-${PROJECT_DIR}/deploy/helm/kryton/values-lab.yaml}"
+  if [ "${CUSTOMER_HELM}" = true ]; then
+    HELM_VALUES="${PROJECT_DIR}/deploy/helm/kryton/values-customer.yaml"
+  fi
   helm upgrade --install kryton "${PROJECT_DIR}/deploy/helm/kryton" \
     -n kryton --create-namespace \
-    -f "${PROJECT_DIR}/deploy/helm/kryton/values-lab.yaml" \
+    -f "${HELM_VALUES}" \
     --set image.repository=kryton --set image.tag=local
   kubectl -n kryton rollout status deployment/kryton --timeout=180s
   NODE_IP="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')"
@@ -130,11 +136,16 @@ else
   sudo install -m755 "${PROJECT_DIR}/bin/krytond" "${PROJECT_DIR}/bin/krytonctl" /usr/local/bin/
   AUTH_MODE="apikey"
   KEYS_FILE="${HOME}/.kryton/keys.json"
+  LAB_AUTO=""
+  LAB_TOKEN=""
   if [ "${INSECURE}" = true ]; then
     AUTH_MODE="disabled"
     KEYS_FILE=""
   else
     KRYTON_KEYS_DIR="${HOME}/.kryton" "${SCRIPT_DIR}/ensure-api-keys.sh"
+    LAB_AUTO="
+Environment=KRYTON_LAB_AUTO_AUTH=true
+Environment=KRYTON_LAB_TOKEN_FILE=${HOME}/.kryton/lab.token"
   fi
   sudo tee /etc/systemd/system/kryton-kubevirt.service >/dev/null <<UNIT
 [Unit]
@@ -157,6 +168,7 @@ Environment=KRYTON_KUBECONFIG=${HOME}/.kube/config
 Environment=KRYTON_PROJECT_ROOT=${HOME}/.deployments/kryton
 Environment=KRYTON_CORS_ORIGINS=*
 Environment=KRYTON_EVENTS_FILE=${HOME}/.kryton/events-kubevirt.jsonl
+${LAB_AUTO}
 ExecStart=/usr/local/bin/krytond
 Restart=on-failure
 RestartSec=3

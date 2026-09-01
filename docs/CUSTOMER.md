@@ -13,8 +13,19 @@ Follow [GA.md](GA.md) end-to-end:
 5. Create → snapshot → restore → delete lifecycle smoke test.
 
 ```bash
-helm upgrade --install kryton ./deploy/helm/kryton -n kryton --create-namespace \
-  -f deploy/helm/kryton/values-customer.yaml
+# On the lab/K8s host (needs docker+kvm, kubectl, virtctl, ~100GiB free):
+
+# Option A — already have a sysprepped qcow2
+KRYTON_WINDOWS_IMAGE=/path/to/windows11.qcow2 ./scripts/setup-kubevirt.sh
+
+# Option B — build golden via dockur + bootstrap + VM (45–90 min for install)
+./scripts/setup-kubevirt-production.sh --build-golden
+
+# Option C — from your laptop (rsync + remote nohup)
+make run-kubevirt-production-remote H=175.110.122.71 U=sus BUILD=1
+
+# Option D — Helm customer profile (after golden exists on cluster)
+./scripts/setup-kubevirt-production.sh --customer-helm --skip-create --image ./out/windows-11e-golden.qcow2
 ```
 
 ## Lab / eval (dockur)
