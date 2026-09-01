@@ -24,4 +24,7 @@ type Provider interface {
 	Stop(context.Context, string, string) (*model.Machine, error)
 	Delete(context.Context, string, string) error
 	Snapshot(context.Context, string, string, string) (*model.Snapshot, error)
+	ListSnapshots(context.Context, string, string) ([]model.Snapshot, error)
+	RestoreSnapshot(context.Context, string, string, string) (*model.Snapshot, error)
+	DeleteSnapshot(context.Context, string, string, string) error
 }

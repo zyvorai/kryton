@@ -210,15 +210,24 @@ For browser SSO, terminate identity at a reverse proxy and set `X-Kryton-User` /
 ## API
 
 ```text
+GET    /api/v1                          # discovery (public)
+GET    /openapi.yaml                    # OpenAPI 3.1 (public)
 GET    /api/v1/projects
 GET    /api/v1/capabilities
 GET    /api/v1/doctor
+GET    /api/v1/settings · PUT · POST …/test
+POST   /api/v1/integrations/atlas/test
+GET    /api/v1/storage · config · setup
 GET    /api/v1/images
+GET    /api/v1/jobs
 GET    /api/v1/summary?project=finance
 GET    /api/v1/machines?project=finance
 POST   /api/v1/machines
 GET    /api/v1/machines/{id}?project=finance
 POST   /api/v1/machines/{id}/start|stop|snapshot?project=finance
+GET    /api/v1/machines/{id}/snapshots?project=finance
+POST   /api/v1/machines/{id}/snapshots/{sid}/restore?project=finance
+DELETE /api/v1/machines/{id}/snapshots/{sid}?project=finance
 DELETE /api/v1/machines/{id}?project=finance
 GET    /api/v1/events
 GET    /api/v1/events/stream
@@ -226,7 +235,7 @@ GET    /api/v1/events/stream
 
 Machine responses include `consoleUrl`, `progressPercent`, and `message` when the provider supports install progress (dockur, demo).
 
-OpenAPI: [`openapi.yaml`](openapi.yaml).
+OpenAPI: [`openapi.yaml`](openapi.yaml) (also served at `/openapi.yaml`). Full contract: [docs/API.md](docs/API.md).
 
 ---
 
@@ -241,6 +250,10 @@ OpenAPI: [`openapi.yaml`](openapi.yaml).
 | `KRYTON_DOCKUR_RUNTIME` | `docker` | `docker` or `podman` |
 | `KRYTON_DOCKUR_DATA_DIR` | *(temp)* | Compose state directory |
 | `KRYTON_KUBECONFIG` | `~/.kube/config` | Kubernetes credentials (kubevirt provider) |
+| `KRYTON_STORAGE_CLASS` | *(cluster default)* | PVC StorageClass for new KubeVirt disks (`rook-ceph-block` or `longhorn`; see [STORAGE.md](docs/STORAGE.md)) |
+| `KRYTON_CORS_ORIGINS` | *(empty)* | Comma-separated browser origins allowed to call the API (`*` for lab). Needed when Axiom/Haven call Kryton from another origin |
+| `KRYTON_ATLAS_URL` | *(empty)* | Atlas gateway base URL for Settings → Integrations (e.g. `http://127.0.0.1:5110`) |
+| `KRYTON_ATLAS_TOKEN` | *(empty)* | Atlas bearer JWT (`product.service.kryton`); see [docs/ATLAS.md](docs/ATLAS.md) |
 | `KRYTON_EVENTS_FILE` | *(memory only)* | Append-only JSONL audit log (survives restarts) |
 | `KRYTON_EVENT_WEBHOOK_SECRET` | *(none)* | HMAC-SHA256 signature for webhook payloads |
 | `KRYTON_DOCKUR_PUBLIC_HOST` | `127.0.0.1` | Hostname/IP for console URLs |
@@ -264,8 +277,11 @@ Run `krytonctl doctor` after changing provider settings to validate the environm
 | [DEPLOY-REMOTE.md](docs/DEPLOY-REMOTE.md) | SSH / rsync lab deploy |
 | [DOCKUR.md](docs/DOCKUR.md) | Real Windows via dockur/windows provider |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production KubeVirt |
+| [STORAGE.md](docs/STORAGE.md) | Rook Ceph / Longhorn disks and snapshots |
+| [ATLAS.md](docs/ATLAS.md) | Integrate Zyvor Atlas storage control plane |
+| [GA.md](docs/GA.md) | Production go-live checklist |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Provider boundary & IDs |
-| [API.md](docs/API.md) | HTTP contract |
+| [API.md](docs/API.md) | HTTP contract + third-party integration |
 | [SECURITY.md](SECURITY.md) | Reporting & posture |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute |
 

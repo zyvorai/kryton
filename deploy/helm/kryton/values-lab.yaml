@@ -3,6 +3,7 @@ provider: kubevirt
 projects: [default]
 defaultProject: default
 imageNamespace: kryton-images
+storageClass: rook-ceph-block
 
 auth:
   mode: disabled

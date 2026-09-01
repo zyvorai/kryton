@@ -87,6 +87,9 @@ echo "=== Kryton KubeVirt setup (API port ${PORT}) ==="
 kubectl cluster-info >/dev/null
 kubectl get crd virtualmachines.kubevirt.io datasources.cdi.kubevirt.io >/dev/null
 
+echo "→ Enabling KubeVirt snapshots (feature gate + CSI)"
+"${SCRIPT_DIR}/enable-kubevirt-snapshots.sh"
+
 if [ "${SKIP_BOOTSTRAP}" = false ]; then
   if [ -n "${IMAGE}" ]; then
     export KRYTON_WINDOWS_IMAGE="${IMAGE}"
@@ -136,9 +139,12 @@ Environment=KRYTON_AUTH_MODE=disabled
 Environment=KRYTON_ALLOW_INSECURE=true
 Environment=KRYTON_ADDR=:${PORT}
 Environment=KRYTON_IMAGE_NAMESPACE=kryton-images
+Environment=KRYTON_STORAGE_CLASS=rook-ceph-block
 Environment=KRYTON_PROJECTS=default
 Environment=KRYTON_DEFAULT_PROJECT=default
 Environment=KRYTON_KUBECONFIG=${HOME}/.kube/config
+Environment=KRYTON_PROJECT_ROOT=${HOME}/.deployments/kryton
+Environment=KRYTON_CORS_ORIGINS=*
 Environment=KRYTON_EVENTS_FILE=${HOME}/.kryton/events-kubevirt.jsonl
 ExecStart=/usr/local/bin/krytond
 Restart=on-failure

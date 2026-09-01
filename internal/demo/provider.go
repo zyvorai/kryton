@@ -13,13 +13,14 @@ import (
 )
 
 type Provider struct {
-	mu       sync.RWMutex
-	machines map[string]map[string]model.Machine
-	nextIP   int
+	mu        sync.RWMutex
+	machines  map[string]map[string]model.Machine
+	snapshots map[string][]model.Snapshot
+	nextIP    int
 }
 
 func New() *Provider {
-	return &Provider{machines: map[string]map[string]model.Machine{}, nextIP: 20}
+	return &Provider{machines: map[string]map[string]model.Machine{}, snapshots: map[string][]model.Snapshot{}, nextIP: 20}
 }
 
 func (p *Provider) Name() string                 { return "demo" }
@@ -106,16 +107,82 @@ func (p *Provider) Delete(_ context.Context, project, machineID string) error {
 		return provider.ErrNotFound
 	}
 	delete(p.machines[project], machineID)
+	delete(p.snapshots, project+"/"+machineID)
 	return nil
 }
 
+func (p *Provider) snapKey(project, machineID string) string { return project + "/" + machineID }
+
 func (p *Provider) Snapshot(_ context.Context, project, machineID, name string) (*model.Snapshot, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if _, ok := p.machines[project][machineID]; !ok {
+		return nil, provider.ErrNotFound
+	}
+	if name == "" {
+		name = "snap-" + time.Now().UTC().Format("20060102-150405")
+	}
+	s := model.Snapshot{ID: id.New(), Project: project, MachineID: machineID, Name: name, State: "ready", CreatedAt: time.Now().UTC()}
+	p.snapshots[p.snapKey(project, machineID)] = append(p.snapshots[p.snapKey(project, machineID)], s)
+	return &s, nil
+}
+
+func (p *Provider) ListSnapshots(_ context.Context, project, machineID string) ([]model.Snapshot, error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	if _, ok := p.machines[project][machineID]; !ok {
 		return nil, provider.ErrNotFound
 	}
-	return &model.Snapshot{ID: id.New(), Project: project, MachineID: machineID, Name: name, State: "ready", CreatedAt: time.Now().UTC()}, nil
+	out := append([]model.Snapshot(nil), p.snapshots[p.snapKey(project, machineID)]...)
+	if out == nil {
+		out = []model.Snapshot{}
+	}
+	return out, nil
+}
+
+func (p *Provider) RestoreSnapshot(_ context.Context, project, machineID, snapshotID string) (*model.Snapshot, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	m, ok := p.machines[project][machineID]
+	if !ok {
+		return nil, provider.ErrNotFound
+	}
+	for i, s := range p.snapshots[p.snapKey(project, machineID)] {
+		if s.ID == snapshotID {
+			s.State = "restored"
+			s.Message = "Restored in demo provider"
+			p.snapshots[p.snapKey(project, machineID)][i] = s
+			m.Message = "Restored from snapshot " + s.Name
+			m.UpdatedAt = time.Now().UTC()
+			p.machines[project][machineID] = m
+			return &s, nil
+		}
+	}
+	return nil, provider.ErrNotFound
+}
+
+func (p *Provider) DeleteSnapshot(_ context.Context, project, machineID, snapshotID string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if _, ok := p.machines[project][machineID]; !ok {
+		return provider.ErrNotFound
+	}
+	key := p.snapKey(project, machineID)
+	cur := p.snapshots[key]
+	next := cur[:0]
+	found := false
+	for _, s := range cur {
+		if s.ID == snapshotID {
+			found = true
+			continue
+		}
+		next = append(next, s)
+	}
+	if !found {
+		return provider.ErrNotFound
+	}
+	p.snapshots[key] = next
+	return nil
 }
 
 func clone(m model.Machine) *model.Machine {

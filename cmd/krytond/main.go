@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/zyvorai/kryton/internal/api"
+	"github.com/zyvorai/kryton/internal/atlas"
 	"github.com/zyvorai/kryton/internal/auth"
 	"github.com/zyvorai/kryton/internal/catalog"
 	"github.com/zyvorai/kryton/internal/config"
@@ -31,6 +32,8 @@ import (
 	"github.com/zyvorai/kryton/internal/metrics"
 	"github.com/zyvorai/kryton/internal/provider"
 	"github.com/zyvorai/kryton/internal/reconciler"
+	"github.com/zyvorai/kryton/internal/settings"
+	"github.com/zyvorai/kryton/internal/storage"
 )
 
 //go:embed web/*
@@ -56,6 +59,46 @@ func main() {
 
 	var p provider.Provider
 	var kubeClient *kubeapi.Client
+	storagePath := cfg.StorageConfigFile
+	if storagePath == "" {
+		home, _ := os.UserHomeDir()
+		if home != "" {
+			storagePath = filepath.Join(home, ".kryton", "storage.json")
+		}
+	}
+	storageStore, err := storage.NewStore(storagePath, cfg.StorageClass)
+	if err != nil {
+		log.Error("storage config store failed", "error", err)
+		os.Exit(2)
+	}
+	settingsPath := os.Getenv("KRYTON_SETTINGS_CONFIG_FILE")
+	if settingsPath == "" {
+		if home, _ := os.UserHomeDir(); home != "" {
+			settingsPath = filepath.Join(home, ".kryton", "settings.json")
+		}
+	}
+	settingsStore, err := settings.NewStore(settingsPath, settings.Runtime{
+		DefaultProject:  cfg.DefaultProject,
+		ImageNamespace:  cfg.ImageNamespace,
+		EventWebhookURL: cfg.EventWebhookURL,
+		Atlas: atlas.Config{
+			Enabled: os.Getenv("KRYTON_ATLAS_URL") != "",
+			BaseURL: strings.TrimSpace(os.Getenv("KRYTON_ATLAS_URL")),
+			Token:   strings.TrimSpace(os.Getenv("KRYTON_ATLAS_TOKEN")),
+			Product: firstNonEmpty(os.Getenv("KRYTON_ATLAS_PRODUCT"), "kryton"),
+		},
+	})
+	if err != nil {
+		log.Error("settings store failed", "error", err)
+		os.Exit(2)
+	}
+	runtimeSettings := settingsStore.Get()
+	effectiveDefault := firstNonEmpty(runtimeSettings.DefaultProject, cfg.DefaultProject)
+	effectiveImageNS := firstNonEmpty(runtimeSettings.ImageNamespace, cfg.ImageNamespace)
+	effectiveSC := storageStore.Get().StorageClass
+	if effectiveSC == "" {
+		effectiveSC = cfg.StorageClass
+	}
 	switch cfg.Provider {
 	case "kubevirt":
 		kc, err := kubeapi.New(kubeapi.Config{
@@ -69,7 +112,7 @@ func main() {
 			os.Exit(2)
 		}
 		kubeClient = kc
-		p = kubevirt.New(kubevirt.Config{Client: kc, NamespacePrefix: cfg.NamespacePrefix, ImageNamespace: cfg.ImageNamespace})
+		p = kubevirt.New(kubevirt.Config{Client: kc, NamespacePrefix: cfg.NamespacePrefix, ImageNamespace: effectiveImageNS, StorageClass: effectiveSC})
 		if err := kubevirt.EnsureNamespaces(context.Background(), kc, cfg.NamespacePrefix, cfg.Projects); err != nil {
 			log.Warn("project namespace bootstrap failed", "error", err)
 		}
@@ -97,9 +140,13 @@ func main() {
 		log.Error("event bus failed", "error", err)
 		os.Exit(2)
 	}
+	if runtimeSettings.EventWebhookURL != "" {
+		bus.SetWebhookURL(runtimeSettings.EventWebhookURL)
+	}
 	m := metrics.New()
 	projectRoot := findProjectRoot()
 	var goldenMgr *golden.Manager
+	var storageSetup *storage.SetupManager
 	if projectRoot != "" {
 		goldenMgr, _ = golden.New(golden.Config{
 			BaseDir:        cfg.GoldenDir,
@@ -107,22 +154,40 @@ func main() {
 			BootstrapPath:  filepath.Join(projectRoot, "scripts", "bootstrap-kubevirt-images.sh"),
 			OEMDir:         filepath.Join(projectRoot, "deploy", "dockur", "oem"),
 			PublicHost:     firstNonEmpty(cfg.Dockur.PublicHost, "127.0.0.1"),
-			ImageNamespace: cfg.ImageNamespace,
+			ImageNamespace: effectiveImageNS,
 			Resolver:       cat,
 		})
+		if cfg.Provider == "kubevirt" {
+			storageSetup, _ = storage.NewSetupManager(storage.SetupConfig{
+				SnapshotsScript: filepath.Join(projectRoot, "scripts", "enable-kubevirt-snapshots.sh"),
+				RookScript:      filepath.Join(projectRoot, "scripts", "enable-rook-ceph.sh"),
+				OnComplete: func(sc string, setDefault bool) {
+					if !setDefault || sc == "" {
+						return
+					}
+					_ = storageStore.Save(storage.Config{StorageClass: sc})
+					if kv, ok := p.(*kubevirt.Provider); ok {
+						kv.SetStorageClass(sc)
+					}
+				},
+			})
+		}
 	}
 	h := api.New(api.Config{
 		Provider: p, Catalog: cat, Events: bus, Auth: authn, Metrics: m, Web: web,
-		Projects: cfg.Projects, DefaultProject: cfg.DefaultProject, AuthMode: cfg.AuthMode,
+		Projects: cfg.Projects, DefaultProject: effectiveDefault, AuthMode: cfg.AuthMode,
 		DockurDataDir: cfg.Dockur.DataDir, DockurRuntime: cfg.Dockur.Runtime,
-		ImageNamespace: cfg.ImageNamespace, NamespacePrefix: cfg.NamespacePrefix,
-		KubeClient: kubeClient, Golden: goldenMgr,
+		ImageNamespace: effectiveImageNS, NamespacePrefix: cfg.NamespacePrefix, StorageClass: effectiveSC,
+		StorageStore: storageStore, StorageSetup: storageSetup, SettingsStore: settingsStore, KubeClient: kubeClient, Golden: goldenMgr,
+		AllowInsecure: cfg.AllowInsecure, DefaultProjectEnv: cfg.DefaultProject, ImageNamespaceEnv: cfg.ImageNamespace,
+		StorageConfigPath: storagePath, SettingsConfigPath: settingsPath,
+		CORSOrigins: cfg.CORSOrigins,
 		Jobs: &jobs.Service{
-			Provider: p, Golden: goldenMgr, Projects: cfg.Projects,
+			Provider: p, Golden: goldenMgr, StorageSetup: storageSetup, Projects: cfg.Projects,
 			DockurData: cfg.Dockur.DataDir, DockurRun: cfg.Dockur.Runtime,
 		},
 		Inventory: &images.Inventory{
-			Provider: p.Name(), ImageNS: cfg.ImageNamespace, KubeClient: kubeClient,
+			Provider: p.Name(), ImageNS: effectiveImageNS, KubeClient: kubeClient,
 			Golden: goldenMgr, ProjectRoot: projectRoot,
 		},
 		Log: log,
@@ -135,7 +200,7 @@ func main() {
 
 	errCh := make(chan error, 1)
 	go func() {
-		log.Info("Kryton starting", "addr", cfg.Addr, "provider", p.Name(), "auth", cfg.AuthMode, "projects", cfg.Projects)
+		log.Info("Kryton starting", "addr", cfg.Addr, "provider", p.Name(), "auth", cfg.AuthMode, "projects", cfg.Projects, "storageClass", effectiveSC)
 		if cfg.TLS.CertFile != "" {
 			if cfg.TLS.ClientCAFile != "" {
 				pem, err := os.ReadFile(cfg.TLS.ClientCAFile)
@@ -176,11 +241,14 @@ func main() {
 
 func findProjectRoot() string {
 	if v := os.Getenv("KRYTON_PROJECT_ROOT"); v != "" {
-		if _, err := os.Stat(filepath.Join(v, "scripts", "build-golden-image.sh")); err == nil {
+		if _, err := os.Stat(filepath.Join(v, "scripts", "enable-kubevirt-snapshots.sh")); err == nil {
 			return filepath.Clean(v)
 		}
 	}
 	var candidates []string
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		candidates = append(candidates, filepath.Join(home, ".deployments", "kryton"))
+	}
 	if cwd, err := os.Getwd(); err == nil {
 		candidates = append(candidates, cwd)
 	}
@@ -190,7 +258,7 @@ func findProjectRoot() string {
 	}
 	for _, c := range candidates {
 		c = filepath.Clean(c)
-		if _, err := os.Stat(filepath.Join(c, "scripts", "build-golden-image.sh")); err == nil {
+		if _, err := os.Stat(filepath.Join(c, "scripts", "enable-kubevirt-snapshots.sh")); err == nil {
 			return c
 		}
 	}

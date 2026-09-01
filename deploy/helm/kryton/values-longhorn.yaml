@@ -1,0 +1,2 @@
+# Point Kryton VM DataVolumes at Longhorn CSI (lab snapshots).
+storageClass: longhorn

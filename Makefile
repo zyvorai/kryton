@@ -1,4 +1,4 @@
-.PHONY: run build test race vet fmt check demo image deploy-remote bootstrap-kubevirt setup-kubevirt build-golden
+.PHONY: run build test race vet fmt check demo image deploy-remote bootstrap-kubevirt setup-kubevirt build-golden enable-kubevirt-snapshots enable-rook-ceph
 
 run:
 	go run ./cmd/krytond
@@ -59,3 +59,9 @@ setup-kubevirt:
 	else \
 		KRYTON_WINDOWS_IMAGE="$(IMAGE)" ./scripts/setup-kubevirt.sh $(ARGS); \
 	fi
+
+enable-kubevirt-snapshots:
+	./scripts/enable-kubevirt-snapshots.sh $(ARGS)
+
+enable-rook-ceph:
+	./scripts/enable-rook-ceph.sh $(ARGS)

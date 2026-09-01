@@ -54,7 +54,15 @@ func main() {
 		c.do("GET", "/api/v1/capabilities", nil)
 	case "doctor":
 		c.do("GET", "/api/v1/doctor", nil)
-	case "get", "start", "stop", "delete", "snapshot":
+	case "storage":
+		c.do("GET", "/api/v1/storage", nil)
+	case "set-storage":
+		if len(os.Args) < 3 {
+			fmt.Fprintln(os.Stderr, "set-storage requires STORAGE_CLASS (or \"\" to clear)")
+			os.Exit(2)
+		}
+		c.do("PUT", "/api/v1/storage/config", map[string]any{"storageClass": os.Args[2]})
+	case "get", "start", "stop", "delete", "snapshot", "snapshots", "restore", "delete-snapshot":
 		machineCommand(c, os.Args[1], os.Args[2:])
 	case "create":
 		createCommand(c, os.Args[2:])
@@ -86,7 +94,7 @@ func machineCommand(c client, cmd string, args []string) {
 	project := f.String("project", c.project, "project")
 	name := f.String("name", "", "snapshot name")
 	_ = f.Parse(args)
-	if f.NArg() != 1 {
+	if f.NArg() < 1 {
 		fmt.Fprintf(os.Stderr, "%s requires MACHINE_ID\n", cmd)
 		os.Exit(2)
 	}
@@ -101,6 +109,20 @@ func machineCommand(c client, cmd string, args []string) {
 		c.do("DELETE", "/api/v1/machines/"+id+q, nil)
 	case "snapshot":
 		c.do("POST", "/api/v1/machines/"+id+"/snapshot"+q, map[string]any{"name": *name})
+	case "snapshots":
+		c.do("GET", "/api/v1/machines/"+id+"/snapshots"+q, nil)
+	case "restore":
+		if f.NArg() != 2 {
+			fmt.Fprintln(os.Stderr, "restore requires MACHINE_ID SNAPSHOT_ID")
+			os.Exit(2)
+		}
+		c.do("POST", "/api/v1/machines/"+id+"/snapshots/"+f.Arg(1)+"/restore"+q, nil)
+	case "delete-snapshot":
+		if f.NArg() != 2 {
+			fmt.Fprintln(os.Stderr, "delete-snapshot requires MACHINE_ID SNAPSHOT_ID")
+			os.Exit(2)
+		}
+		c.do("DELETE", "/api/v1/machines/"+id+"/snapshots/"+f.Arg(1)+q, nil)
 	}
 }
 func (c client) do(method, path string, body any) {
@@ -148,11 +170,16 @@ func usage() {
   start MACHINE_ID
   stop MACHINE_ID
   snapshot MACHINE_ID [--name NAME]
+  snapshots MACHINE_ID
+  restore MACHINE_ID SNAPSHOT_ID
+  delete-snapshot MACHINE_ID SNAPSHOT_ID
   delete MACHINE_ID
   images
   events
   capabilities
   doctor
+  storage
+  set-storage STORAGE_CLASS
   generate-token
   hash-token TOKEN
 

@@ -12,18 +12,25 @@ import (
 	"github.com/zyvorai/kryton/internal/golden"
 	"github.com/zyvorai/kryton/internal/model"
 	"github.com/zyvorai/kryton/internal/provider"
+	"github.com/zyvorai/kryton/internal/storage"
 )
 
 type Service struct {
-	Provider    provider.Provider
-	Golden      *golden.Manager
-	Projects    []string
-	DockurData  string
-	DockurRun   string
+	Provider     provider.Provider
+	Golden       *golden.Manager
+	StorageSetup *storage.SetupManager
+	Projects     []string
+	DockurData   string
+	DockurRun    string
 }
 
 func (s *Service) List(ctx context.Context) ([]model.Job, error) {
 	var out []model.Job
+	if s.StorageSetup != nil {
+		if j := storageSetupJob(s.StorageSetup); j != nil {
+			out = append(out, *j)
+		}
+	}
 	if s.Golden != nil {
 		builds, err := s.Golden.List()
 		if err == nil {
@@ -342,5 +349,75 @@ func sortJobs(items []model.Job) {
 				items[i], items[j] = items[j], items[i]
 			}
 		}
+	}
+}
+
+func storageSetupJob(m *storage.SetupManager) *model.Job {
+	st, err := m.Get()
+	if err != nil || st == nil {
+		return nil
+	}
+	active := st.State == "running"
+	recent := time.Since(st.UpdatedAt) < 2*time.Hour
+	if !active && !(recent && st.State != "idle" && st.State != "") {
+		return nil
+	}
+	state := model.JobRunning
+	switch st.State {
+	case "succeeded":
+		state = model.JobSucceeded
+	case "failed":
+		state = model.JobFailed
+	case "idle", "":
+		return nil
+	}
+	progress := 50
+	if state == model.JobSucceeded {
+		progress = 100
+	} else if state == model.JobFailed {
+		progress = 0
+	}
+	labels := []string{"Enable KubeVirt snapshots", "Install CSI backend", "Apply StorageClass", "Verify cluster inventory"}
+	stepIdx := 2
+	if state == model.JobSucceeded {
+		stepIdx = 5
+	} else if state == model.JobFailed {
+		stepIdx = 2
+	}
+	steps := make([]model.JobStep, len(labels))
+	for i, label := range labels {
+		stepSt := model.JobStepPending
+		if i+1 < stepIdx {
+			stepSt = model.JobStepDone
+		} else if i+1 == stepIdx && state == model.JobRunning {
+			stepSt = model.JobStepActive
+		}
+		d := ""
+		if stepSt == model.JobStepActive {
+			d = st.Message
+		}
+		steps[i] = model.JobStep{ID: strings.ReplaceAll(strings.ToLower(label), " ", "-"), Label: label, State: stepSt, Detail: d}
+	}
+	var logs []model.JobLogLine
+	for _, line := range m.Logs(120) {
+		level := "info"
+		switch {
+		case strings.HasPrefix(line, "[ERR]"):
+			level = "err"
+		case strings.HasPrefix(line, "[OK]"):
+			level = "ok"
+		case strings.HasPrefix(line, "[WARN]"):
+			level = "warn"
+		}
+		logs = append(logs, model.JobLogLine{Time: st.UpdatedAt, Level: level, Message: strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(line, "[INFO] "), "[ERR] "), "[OK] ")})
+	}
+	name := "Storage: " + st.Backend
+	if st.Device != "" {
+		name += " (" + st.Device + ")"
+	}
+	return &model.Job{
+		ID: "storage:setup", Kind: "storage", Name: name, State: state,
+		ProgressPercent: progress, Message: st.Message, Steps: steps, Logs: logs,
+		StartedAt: st.StartedAt, UpdatedAt: st.UpdatedAt,
 	}
 }

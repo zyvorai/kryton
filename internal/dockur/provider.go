@@ -271,6 +271,15 @@ func (p *Provider) Delete(ctx context.Context, project, machineID string) error 
 func (p *Provider) Snapshot(context.Context, string, string, string) (*model.Snapshot, error) {
 	return nil, fmt.Errorf("%w: dockur provider does not support snapshots yet", provider.ErrUnsupported)
 }
+func (p *Provider) ListSnapshots(context.Context, string, string) ([]model.Snapshot, error) {
+	return nil, fmt.Errorf("%w: dockur provider does not support snapshots yet", provider.ErrUnsupported)
+}
+func (p *Provider) RestoreSnapshot(context.Context, string, string, string) (*model.Snapshot, error) {
+	return nil, fmt.Errorf("%w: dockur provider does not support snapshots yet", provider.ErrUnsupported)
+}
+func (p *Provider) DeleteSnapshot(context.Context, string, string, string) error {
+	return fmt.Errorf("%w: dockur provider does not support snapshots yet", provider.ErrUnsupported)
+}
 
 func (p *Provider) resolveVersion(imageID string) (string, bool) {
 	if p.catalog != nil {

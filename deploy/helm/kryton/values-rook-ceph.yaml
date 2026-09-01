@@ -1,0 +1,3 @@
+# Point Kryton VM DataVolumes at Rook Ceph RBD (snapshots + clones).
+# Install first: ./scripts/enable-rook-ceph.sh  (or --lab)
+storageClass: rook-ceph-block

@@ -19,6 +19,7 @@ type Config struct {
 	DefaultProject     string
 	ImageNamespace     string
 	NamespacePrefix    string
+	StorageClass       string
 	ImagesFile         string
 	AuthMode           string
 	APIKeysFile        string
@@ -29,6 +30,8 @@ type Config struct {
 	EventWebhookSecret string
 	EventsFile         string
 	GoldenDir          string
+	StorageConfigFile  string
+	CORSOrigins        []string
 	ReconcileInterval  time.Duration
 	ShutdownTimeout    time.Duration
 	Kubernetes         Kubernetes
@@ -69,6 +72,7 @@ func Load() (Config, error) {
 		DefaultProject:     getenv("KRYTON_DEFAULT_PROJECT", first(projects, "default")),
 		ImageNamespace:     getenv("KRYTON_IMAGE_NAMESPACE", "kryton-images"),
 		NamespacePrefix:    getenv("KRYTON_NAMESPACE_PREFIX", ""),
+		StorageClass:       getenv("KRYTON_STORAGE_CLASS", ""),
 		ImagesFile:         os.Getenv("KRYTON_IMAGES_FILE"),
 		AuthMode:           strings.ToLower(getenv("KRYTON_AUTH_MODE", "disabled")),
 		APIKeysFile:        os.Getenv("KRYTON_API_KEYS_FILE"),
@@ -79,6 +83,8 @@ func Load() (Config, error) {
 		EventWebhookSecret: os.Getenv("KRYTON_EVENT_WEBHOOK_SECRET"),
 		EventsFile:         os.Getenv("KRYTON_EVENTS_FILE"),
 		GoldenDir:          getenv("KRYTON_GOLDEN_DIR", ""),
+		StorageConfigFile:  getenv("KRYTON_STORAGE_CONFIG_FILE", ""),
+		CORSOrigins:        splitCSV(os.Getenv("KRYTON_CORS_ORIGINS")),
 		ReconcileInterval:  durationEnv("KRYTON_RECONCILE_INTERVAL", 30*time.Second),
 		ShutdownTimeout:    durationEnv("KRYTON_SHUTDOWN_TIMEOUT", 15*time.Second),
 		Kubernetes: Kubernetes{

@@ -4,9 +4,9 @@ Kryton is deliberately split at the **provider boundary**. Callers see one stabl
 
 ```text
 Consumers
-  Veyron / Zeus / Transiva / CI / portals / third parties
+  Veyron / Zeus / Atlas / Haven / CI / portals / third parties
                          |
-                 REST + CloudEvents
+                 REST + CloudEvents (+ OpenAPI / CORS)
                          |
                      Kryton API
                          |
@@ -19,6 +19,9 @@ Consumers
            dockur/windows     Kubernetes REST
            (Docker/Podman+KVM)       |
                                QEMU / KVM VMs
+                                     │
+                          CSI disks (Rook / Longhorn)
+                          optional Atlas discovery
 ```
 
 ---
@@ -77,7 +80,19 @@ Dockur provisioning additionally emits `io.kryton.machine.install.started` when 
 
 ## Diagnostics
 
-`internal/doctor` runs provider-aware health checks exposed as `GET /api/v1/doctor` and `krytonctl doctor`. Checks include auth mode, projects, catalog, provider health, and (for dockur) runtime, compose, KVM, and data-dir writability.
+`internal/doctor` runs provider-aware health checks exposed as `GET /api/v1/doctor` and `krytonctl doctor`. Checks include auth mode, projects, catalog, provider health, and (for dockur) runtime, compose, KVM, and data-dir writability. For kubevirt it also checks namespaces, DataSources, snapshot CRDs, and StorageClass ↔ VolumeSnapshotClass pairing.
+
+`POST /api/v1/settings/test` and Settings → **Test connection** run live probes (Kubernetes, KubeVirt, storage, kubectl, install scripts).
+
+## Storage and Atlas
+
+KubeVirt VM disks need a CSI StorageClass with a matching VolumeSnapshotClass — see [STORAGE.md](STORAGE.md). Operators can install Rook/Longhorn from Settings or scripts, and set the Kryton default StorageClass via UI/API (`~/.kryton/storage.json`).
+
+Optional **Atlas** integration ([ATLAS.md](ATLAS.md)) points Kryton at the Zyvor storage control plane (`product: kryton`) for discovery and ownership conventions.
+
+## Public API surface
+
+Other products discover Kryton via `GET /api/v1` and `GET /openapi.yaml`. Cross-origin browser clients need `KRYTON_CORS_ORIGINS`. See [API.md](API.md).
 
 ---
 

@@ -108,8 +108,32 @@
     </section>
 
     <section id="view-settings" class="view">
-      <header class="section-page-header"><div><p class="eyebrow">CONTROL PLANE</p><h2>Settings</h2><p>Connection identity and provider capabilities for this Kryton instance.</p></div></header>
+      <header class="section-page-header"><div><p class="eyebrow">CONTROL PLANE</p><h2>Settings</h2><p>Connection identity, provider capabilities, and cluster disk storage for this Kryton instance.</p></div></header>
       <div class="settings-grid"><article class="surface settings-card"><span class="settings-icon"><svg class="sf-icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><use href="#icon-identity"/></svg></span><h3>Identity</h3><dl id="identityDetails"></dl></article><article class="surface settings-card"><span class="settings-icon"><svg class="sf-icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><use href="#icon-provider"/></svg></span><h3>Provider</h3><dl id="providerDetails"></dl></article><article class="surface settings-card"><span class="settings-icon"><svg class="sf-icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><use href="#icon-api"/></svg></span><h3>API access</h3><p>Use a project-scoped bearer token for service-to-service access.</p><button class="secondary" id="tokenButton">Set session token</button><small>Stored only for this browser session.</small></article></div>
+      <article class="surface settings-storage" id="settingsConnectionCard">
+        <p class="eyebrow">CONNECTION</p>
+        <h3>Control plane health</h3>
+        <p>Test Kubernetes, KubeVirt, storage, and install-script connectivity before creating machines.</p>
+        <div id="settingsConnectionBody"></div>
+      </article>
+      <article class="surface settings-storage" id="settingsRuntimeCard">
+        <p class="eyebrow">RUNTIME</p>
+        <h3>Operator settings</h3>
+        <p>Values persisted on this krytond host and applied without restart.</p>
+        <div id="settingsRuntimeBody"></div>
+      </article>
+      <article class="surface settings-storage" id="settingsAtlasCard">
+        <p class="eyebrow">INTEGRATIONS</p>
+        <h3>Atlas storage control plane</h3>
+        <p>Connect Kryton to Atlas (<code>../../atlas</code>) so Windows VM disks can use Atlas-managed Ceph StorageClasses and ownership (<code>product: kryton</code>).</p>
+        <div id="settingsAtlasBody"></div>
+      </article>
+      <article class="surface settings-storage" id="storageSettingsCard" hidden>
+        <p class="eyebrow">VM DISKS</p>
+        <h3>Cluster storage</h3>
+        <p>Install Rook Ceph or Longhorn on this cluster, then pick the default StorageClass for new Windows disks and snapshots.</p>
+        <div id="storageSettingsBody"></div>
+      </article>
     </section>
 
     <footer>Kryton by <a href="https://zyvor.dev" target="_blank" rel="noopener noreferrer">Zyvor</a> · Apache License 2.0</footer>
@@ -120,7 +144,7 @@
   <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="createTitle">
     <button class="close-button" data-close-modal aria-label="Close"><svg class="sf-icon" viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><use href="#icon-close"/></svg></button><p class="eyebrow">NEW WORKLOAD</p><h2 id="createTitle">Create a Windows machine</h2><p class="modal-lead">Kryton creates the machine through the selected provider while keeping your API contract unchanged.</p>
     <form id="createForm">
-      <div class="form-grid"><label class="wide">Machine name<input name="name" value="finance-win01" required pattern="[a-z0-9]([-a-z0-9]*[a-z0-9])?"></label><label>Project<select name="project" id="createProject"></select></label><label class="wide image-picker-label">Windows image<div id="createImagePicker" class="image-picker" role="radiogroup" aria-label="Windows image"></div><select name="image" id="createImage" class="sr-only" aria-hidden="true" tabindex="-1"></select></label><label>vCPU<input name="cpu" type="number" min="1" max="256" value="4" required></label><label>Memory (MiB)<input name="memory" type="number" min="512" value="8192" required></label><label>Boot disk (GiB)<input name="disk" type="number" min="16" value="80" required></label><label>TTL (minutes)<input name="ttl" type="number" min="0" value="0"></label><label class="wide">Network attachment <span class="optional">optional</span><input name="network" placeholder="namespace/network-attachment-definition"></label></div>
+      <div class="form-grid"><label class="wide">Machine name<input name="name" value="finance-win01" required pattern="[a-z0-9]([-a-z0-9]*[a-z0-9])?"></label><label>Project<select name="project" id="createProject"></select></label><label class="wide image-picker-label">Windows image<div id="createImagePicker" class="image-picker" role="radiogroup" aria-label="Windows image"></div><select name="image" id="createImage" class="sr-only" aria-hidden="true" tabindex="-1"></select></label><label>vCPU<input name="cpu" type="number" min="1" max="256" value="4" required></label><label>Memory (MiB)<input name="memory" type="number" min="512" value="8192" required></label><label>Boot disk (GiB)<input name="disk" type="number" min="16" value="80" required></label><label>Storage class <span class="optional">optional</span><select name="storageClass" id="createStorageClass"><option value="">Default (Settings)</option></select></label><label>TTL (minutes)<input name="ttl" type="number" min="0" value="0"></label><label class="wide">Network attachment <span class="optional">optional</span><input name="network" placeholder="namespace/network-attachment-definition"></label></div>
       <div class="modal-footer"><button type="button" class="secondary" data-close-modal>Cancel</button><button class="primary" type="submit" id="createSubmit">Create machine</button></div>
     </form>
   </div>

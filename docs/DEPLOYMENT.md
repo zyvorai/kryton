@@ -15,12 +15,28 @@ This guide covers the **KubeVirt** production path with Helm.
 - `DataSource` objects for each configured Kryton image ID in the configured image namespace.
 - One Kubernetes namespace per Kryton project, or namespaces using the configured prefix.
 - RBAC allowing the Kryton service account to manage KubeVirt VMs and snapshots in those namespaces.
+- A **CSI StorageClass with VolumeSnapshotClass** for VM disks (Rook Ceph RBD recommended, Longhorn for lab). See **[STORAGE.md](STORAGE.md)**.
+- (Optional) Atlas gateway for suite-wide storage ownership — **[ATLAS.md](ATLAS.md)**.
+- OpenAPI served at `/openapi.yaml`; set `KRYTON_CORS_ORIGINS` when browsers on other Zyvor apps call Kryton.
 
 Validate your estate before go-live:
 
 ```bash
 krytonctl doctor   # after pointing KRYTON_PROVIDER=kubevirt at the cluster
 ```
+
+---
+
+## Settings & storage
+
+From the Kryton UI (**Settings**):
+
+- **Test connection** — Kubernetes / KubeVirt / storage probes (`POST /api/v1/settings/test`)
+- **Operator settings** — default project, image namespace, storage class, event webhook
+- **Atlas** — optional Zyvor storage control plane ([ATLAS.md](ATLAS.md))
+- **Cluster storage** — install Rook/Longhorn and pick the default StorageClass ([STORAGE.md](STORAGE.md))
+
+Helm values: `corsOrigins`, `storageClass`, and `-f values-rook-ceph.yaml` / `values-longhorn.yaml`.
 
 ---
 
@@ -64,6 +80,16 @@ helm upgrade --install kryton ./deploy/helm/kryton -n kryton --create-namespace
 
 Image: `ghcr.io/zyvorai/kryton` (see `deploy/helm/kryton/values.yaml`).
 
+Storage profiles:
+
+```bash
+# Rook Ceph RBD (after scripts/enable-rook-ceph.sh)
+helm upgrade --install kryton ./deploy/helm/kryton -n kryton -f deploy/helm/kryton/values-rook-ceph.yaml
+
+# Longhorn lab CSI
+helm upgrade --install kryton ./deploy/helm/kryton -n kryton -f deploy/helm/kryton/values-longhorn.yaml
+```
+
 ---
 
 ## Authentication
@@ -78,7 +104,23 @@ For browser SSO, place Kryton behind an authenticated reverse proxy and use `KRY
 
 Kryton can terminate TLS directly with `KRYTON_TLS_CERT_FILE` and `KRYTON_TLS_KEY_FILE`. If `KRYTON_CLIENT_CA_FILE` is configured, the server additionally requires and verifies client certificates.
 
-Alternatively, terminate TLS at an ingress controller and forward plain HTTP to Kryton inside the cluster.
+Alternatively, terminate TLS at an ingress controller and forward plain HTTP to Kryton inside the cluster. Enable the chart Ingress:
+
+```yaml
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: kryton.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: kryton-tls
+      hosts: [kryton.example.com]
+```
+
+See **[GA.md](GA.md)** for the production go-live checklist.
 
 ---
 

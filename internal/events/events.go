@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -84,6 +85,12 @@ func (b *Bus) Publish(ctx context.Context, eventType, subject string, data map[s
 		b.deliverWebhook(ctx, e)
 	}
 	return e
+}
+
+func (b *Bus) SetWebhookURL(url string) {
+	b.mu.Lock()
+	b.webhook = strings.TrimSpace(url)
+	b.mu.Unlock()
 }
 
 func (b *Bus) List(limit int) []Event {

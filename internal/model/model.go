@@ -31,7 +31,8 @@ type ComputeSpec struct {
 }
 
 type DiskSpec struct {
-	SizeGiB int `json:"sizeGiB"`
+	SizeGiB       int    `json:"sizeGiB"`
+	StorageClass  string `json:"storageClass,omitempty"`
 }
 
 type NetworkSpec struct {
@@ -86,6 +87,7 @@ type Snapshot struct {
 	MachineID string    `json:"machineId"`
 	Name      string    `json:"name"`
 	State     string    `json:"state"`
+	Message   string    `json:"message,omitempty"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 

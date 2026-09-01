@@ -9,6 +9,19 @@ Provision **Windows 11** (and other catalog images) on Kubernetes via KubeVirt. 
 - Kubernetes cluster with **KubeVirt** and **CDI** installed
 - `kubectl`, `virtctl`, and `qemu-img` on the operator host
 - A **sysprepped Windows qcow2** golden image (operator-provided; Kryton does not ship media)
+- **CSI volume snapshots** — `rancher.io/local-path` cannot snapshot VM disks. Choose a backend (see **[STORAGE.md](STORAGE.md)**):
+
+```bash
+# Production / this lab: Rook Ceph RBD on dedicated partition
+./scripts/enable-kubevirt-snapshots.sh --storage rook-ceph --device /dev/sdb1
+export KRYTON_STORAGE_CLASS=rook-ceph-block
+
+# Alternate lab CSI: Longhorn
+./scripts/enable-kubevirt-snapshots.sh --storage longhorn
+export KRYTON_STORAGE_CLASS=longhorn
+```
+
+That turns on the KubeVirt `Snapshot` feature gate, ensures the CSI snapshot controller is present, and installs a CSI StorageClass + VolumeSnapshotClass. Kryton creates `VirtualMachineSnapshot` / `VirtualMachineRestore` objects (API, UI, `krytonctl snapshot`).
 
 Build one with the WinForge-style pipeline — see **[GOLDEN-IMAGES.md](GOLDEN-IMAGES.md)**.
 

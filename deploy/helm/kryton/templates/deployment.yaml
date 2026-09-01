@@ -41,6 +41,10 @@ spec:
               value: {{ .Values.namespacePrefix | quote }}
             - name: KRYTON_IMAGE_NAMESPACE
               value: {{ .Values.imageNamespace | quote }}
+            {{- if .Values.storageClass }}
+            - name: KRYTON_STORAGE_CLASS
+              value: {{ .Values.storageClass | quote }}
+            {{- end }}
             - name: KRYTON_IMAGES_FILE
               value: /etc/kryton/catalog/images.json
             - name: KRYTON_AUTH_MODE
@@ -54,6 +58,10 @@ spec:
             {{- if .Values.eventWebhookURL }}
             - name: KRYTON_EVENT_WEBHOOK_URL
               value: {{ .Values.eventWebhookURL | quote }}
+            {{- end }}
+            {{- if .Values.corsOrigins }}
+            - name: KRYTON_CORS_ORIGINS
+              value: {{ join "," .Values.corsOrigins | quote }}
             {{- end }}
             {{- if eq .Values.auth.mode "apikey" }}
             - name: KRYTON_API_KEYS_FILE

@@ -13,7 +13,6 @@ import (
 
 	"github.com/zyvorai/kryton/internal/auth"
 	"github.com/zyvorai/kryton/internal/catalog"
-	"github.com/zyvorai/kryton/internal/doctor"
 	"github.com/zyvorai/kryton/internal/events"
 	"github.com/zyvorai/kryton/internal/golden"
 	"github.com/zyvorai/kryton/internal/images"
@@ -22,6 +21,8 @@ import (
 	"github.com/zyvorai/kryton/internal/metrics"
 	"github.com/zyvorai/kryton/internal/model"
 	"github.com/zyvorai/kryton/internal/provider"
+	"github.com/zyvorai/kryton/internal/settings"
+	"github.com/zyvorai/kryton/internal/storage"
 )
 
 type Config struct {
@@ -38,11 +39,21 @@ type Config struct {
 	DockurRuntime   string
 	ImageNamespace  string
 	NamespacePrefix string
+	StorageClass    string
+	StorageStore    *storage.Store
+	StorageSetup    *storage.SetupManager
+	SettingsStore   *settings.Store
 	KubeClient      *kubeapi.Client
 	Golden          *golden.Manager
 	Jobs            *jobs.Service
 	Inventory       *images.Inventory
 	Log             *slog.Logger
+	AllowInsecure   bool
+	DefaultProjectEnv  string
+	ImageNamespaceEnv  string
+	StorageConfigPath  string
+	SettingsConfigPath string
+	CORSOrigins        []string
 }
 
 type Server struct {
@@ -59,11 +70,21 @@ type Server struct {
 	dockurRuntime   string
 	imageNamespace  string
 	namespacePrefix string
+	storageClass    string
+	storageStore    *storage.Store
+	storageSetup    *storage.SetupManager
+	settingsStore   *settings.Store
 	kubeClient      *kubeapi.Client
 	golden          *golden.Manager
 	jobs            *jobs.Service
 	inventory       *images.Inventory
 	log             *slog.Logger
+	allowInsecure   bool
+	defaultProjectEnv  string
+	imageNamespaceEnv  string
+	storageConfigPath  string
+	settingsConfigPath string
+	corsOrigins        []string
 }
 
 type createRequest struct {
@@ -90,7 +111,9 @@ func New(cfg Config) *Server {
 		p: cfg.Provider, catalog: cfg.Catalog, events: cfg.Events, auth: cfg.Auth, metrics: cfg.Metrics, web: cfg.Web,
 		projects: cfg.Projects, defaultProject: cfg.DefaultProject, authMode: cfg.AuthMode,
 		dockurDataDir: cfg.DockurDataDir, dockurRuntime: cfg.DockurRuntime, imageNamespace: cfg.ImageNamespace,
-		namespacePrefix: cfg.NamespacePrefix, kubeClient: cfg.KubeClient, golden: cfg.Golden, jobs: cfg.Jobs, inventory: cfg.Inventory, log: cfg.Log,
+		namespacePrefix: cfg.NamespacePrefix, storageClass: cfg.StorageClass, storageStore: cfg.StorageStore, storageSetup: cfg.StorageSetup, settingsStore: cfg.SettingsStore, kubeClient: cfg.KubeClient, golden: cfg.Golden, jobs: cfg.Jobs, inventory: cfg.Inventory, log: cfg.Log,
+		allowInsecure: cfg.AllowInsecure, defaultProjectEnv: cfg.DefaultProjectEnv, imageNamespaceEnv: cfg.ImageNamespaceEnv,
+		storageConfigPath: cfg.StorageConfigPath, settingsConfigPath: cfg.SettingsConfigPath, corsOrigins: cfg.CORSOrigins,
 	}
 }
 
@@ -100,6 +123,15 @@ func (s *Server) Handler() http.Handler {
 	apiMux.HandleFunc("GET /api/v1/projects", s.listProjects)
 	apiMux.HandleFunc("GET /api/v1/capabilities", s.capabilities)
 	apiMux.HandleFunc("GET /api/v1/doctor", s.doctor)
+	apiMux.HandleFunc("GET /api/v1/storage", s.getStorage)
+	apiMux.HandleFunc("GET /api/v1/storage/config", s.getStorageConfig)
+	apiMux.HandleFunc("PUT /api/v1/storage/config", s.putStorageConfig)
+	apiMux.HandleFunc("GET /api/v1/storage/setup", s.getStorageSetup)
+	apiMux.HandleFunc("POST /api/v1/storage/setup", s.postStorageSetup)
+	apiMux.HandleFunc("GET /api/v1/settings", s.getSettings)
+	apiMux.HandleFunc("PUT /api/v1/settings", s.putSettings)
+	apiMux.HandleFunc("POST /api/v1/settings/test", s.postSettingsTest)
+	apiMux.HandleFunc("POST /api/v1/integrations/atlas/test", s.postAtlasTest)
 	apiMux.HandleFunc("GET /api/v1/images", s.images)
 	apiMux.HandleFunc("GET /api/v1/golden", s.goldenList)
 	apiMux.HandleFunc("POST /api/v1/golden", s.goldenStart)
@@ -118,6 +150,9 @@ func (s *Server) Handler() http.Handler {
 	apiMux.HandleFunc("POST /api/v1/machines/{id}/start", s.startMachine)
 	apiMux.HandleFunc("POST /api/v1/machines/{id}/stop", s.stopMachine)
 	apiMux.HandleFunc("POST /api/v1/machines/{id}/snapshot", s.snapshotMachine)
+	apiMux.HandleFunc("GET /api/v1/machines/{id}/snapshots", s.listSnapshots)
+	apiMux.HandleFunc("POST /api/v1/machines/{id}/snapshots/{sid}/restore", s.restoreSnapshot)
+	apiMux.HandleFunc("DELETE /api/v1/machines/{id}/snapshots/{sid}", s.deleteSnapshot)
 	apiMux.HandleFunc("GET /api/v1/events", s.listEvents)
 	apiMux.HandleFunc("GET /api/v1/events/stream", s.streamEvents)
 
@@ -127,9 +162,13 @@ func (s *Server) Handler() http.Handler {
 	})
 	root.HandleFunc("GET /readyz", s.ready)
 	root.HandleFunc("GET /metrics", s.metrics.Handler)
+	root.HandleFunc("GET /openapi.yaml", s.serveOpenAPI)
+	root.HandleFunc("GET /api/openapi.yaml", s.serveOpenAPI)
+	// Exact match only — a trailing-slash pattern would steal /api/v1/*.
+	root.HandleFunc("GET /api/v1", s.apiDiscovery)
 	root.Handle("/api/", s.auth.Middleware(apiMux))
 	root.Handle("/", s.staticHandler())
-	return s.requestID(s.accessLog(s.security(s.recoverer(root))))
+	return s.requestID(s.accessLog(s.cors(s.security(s.recoverer(root)))))
 }
 
 func (s *Server) me(w http.ResponseWriter, r *http.Request) {
@@ -148,17 +187,7 @@ func (s *Server) capabilities(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, http.StatusOK, c)
 }
 func (s *Server) doctor(w http.ResponseWriter, r *http.Request) {
-	report := doctor.Run(r.Context(), doctor.Input{
-		Provider:        s.p,
-		Catalog:         s.catalog,
-		AuthMode:        s.authMode,
-		Projects:        s.projects,
-		DockurDir:       s.dockurDataDir,
-		Runtime:         s.dockurRuntime,
-		KubeClient:      s.kubeClient,
-		ImageNamespace:  s.imageNamespace,
-		NamespacePrefix: s.namespacePrefix,
-	})
+	report := s.runDoctor(r)
 	status := http.StatusOK
 	if !report.Healthy {
 		status = http.StatusServiceUnavailable
@@ -339,6 +368,52 @@ func (s *Server) snapshotMachine(w http.ResponseWriter, r *http.Request) {
 	s.metrics.Operation("snapshot")
 	s.events.Publish(r.Context(), "io.kryton.snapshot.created", "snapshots/"+snap.ID, map[string]any{"project": project, "machineId": snap.MachineID, "snapshotId": snap.ID, "name": snap.Name})
 	jsonResponse(w, http.StatusCreated, snap)
+}
+
+func (s *Server) listSnapshots(w http.ResponseWriter, r *http.Request) {
+	project, ok := s.requireProject(w, r, auth.Viewer)
+	if !ok {
+		return
+	}
+	items, err := s.p.ListSnapshots(r.Context(), project, r.PathValue("id"))
+	if err != nil {
+		s.writeErr(w, r, err)
+		return
+	}
+	if items == nil {
+		items = []model.Snapshot{}
+	}
+	jsonResponse(w, http.StatusOK, listResponse[model.Snapshot]{Items: items})
+}
+
+func (s *Server) restoreSnapshot(w http.ResponseWriter, r *http.Request) {
+	project, ok := s.requireProject(w, r, auth.Operator)
+	if !ok {
+		return
+	}
+	snap, err := s.p.RestoreSnapshot(r.Context(), project, r.PathValue("id"), r.PathValue("sid"))
+	if err != nil {
+		s.writeErr(w, r, err)
+		return
+	}
+	s.metrics.Operation("snapshot-restore")
+	s.events.Publish(r.Context(), "io.kryton.snapshot.restored", "snapshots/"+snap.ID, map[string]any{"project": project, "machineId": snap.MachineID, "snapshotId": snap.ID, "name": snap.Name})
+	jsonResponse(w, http.StatusAccepted, snap)
+}
+
+func (s *Server) deleteSnapshot(w http.ResponseWriter, r *http.Request) {
+	project, ok := s.requireProject(w, r, auth.Operator)
+	if !ok {
+		return
+	}
+	sid := r.PathValue("sid")
+	if err := s.p.DeleteSnapshot(r.Context(), project, r.PathValue("id"), sid); err != nil {
+		s.writeErr(w, r, err)
+		return
+	}
+	s.metrics.Operation("snapshot-delete")
+	s.events.Publish(r.Context(), "io.kryton.snapshot.deleted", "snapshots/"+sid, map[string]any{"project": project, "machineId": r.PathValue("id"), "snapshotId": sid})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) listEvents(w http.ResponseWriter, r *http.Request) {

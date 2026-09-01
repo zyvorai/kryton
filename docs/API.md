@@ -9,9 +9,20 @@ OpenAPI spec: [`openapi.yaml`](../openapi.yaml).
 ## Endpoints
 
 ```text
+GET    /api/v1                          # discovery catalog (public)
+GET    /api/v1/me
 GET    /api/v1/projects
 GET    /api/v1/capabilities
 GET    /api/v1/doctor
+GET    /api/v1/storage
+GET    /api/v1/storage/config
+PUT    /api/v1/storage/config
+GET    /api/v1/storage/setup
+POST   /api/v1/storage/setup
+GET    /api/v1/settings
+PUT    /api/v1/settings
+POST   /api/v1/settings/test
+POST   /api/v1/integrations/atlas/test
 GET    /api/v1/images
 GET    /api/v1/golden
 POST   /api/v1/golden
@@ -23,15 +34,73 @@ GET    /api/v1/summary?project=<project>
 GET    /api/v1/machines?project=<project>
 POST   /api/v1/machines
 GET    /api/v1/machines/{id}?project=<project>
+GET    /api/v1/machines/{id}/console?project=<project>
+GET    /api/v1/machines/{id}/vnc?project=<project>
 POST   /api/v1/machines/{id}/start?project=<project>
 POST   /api/v1/machines/{id}/stop?project=<project>
 POST   /api/v1/machines/{id}/snapshot?project=<project>
+GET    /api/v1/machines/{id}/snapshots?project=<project>
+POST   /api/v1/machines/{id}/snapshots/{sid}/restore?project=<project>
+DELETE /api/v1/machines/{id}/snapshots/{sid}?project=<project>
 DELETE /api/v1/machines/{id}?project=<project>
 GET    /api/v1/events
 GET    /api/v1/events/stream
 ```
 
-Health probes (unauthenticated): `GET /healthz` · `GET /readyz` · `GET /metrics`.
+Public (no auth): `GET /api/v1` · `GET /openapi.yaml` · `GET /healthz` · `GET /readyz` · `GET /metrics`.
+
+OpenAPI 3.1: [`openapi.yaml`](../openapi.yaml) — also served live at `/openapi.yaml`.
+
+---
+
+## Integrating from other projects
+
+Kryton is designed for Zyvor products (Axiom, Haven, automation) to drive Windows VMs over HTTP.
+
+```bash
+# 1. Discover the surface (no token required)
+curl -sS "$KRYTON_URL/api/v1" | jq .
+
+# 2. Fetch OpenAPI for codegen
+curl -sS "$KRYTON_URL/openapi.yaml" -o kryton.openapi.yaml
+
+# 3. Call authenticated APIs
+curl -sS -H "Authorization: Bearer $KRYTON_TOKEN" \
+  "$KRYTON_URL/api/v1/machines?project=default"
+```
+
+**CORS** — set `KRYTON_CORS_ORIGINS` to the calling app origins (comma-separated), or `*` in lab:
+
+```bash
+Environment=KRYTON_CORS_ORIGINS=https://axiom.example,https://haven.example
+```
+
+**Auth for service-to-service:**
+
+| Mode | How |
+|------|-----|
+| `apikey` | `Authorization: Bearer <token>` (hash with `krytonctl hash-token`) |
+| `proxy` | Edge sets `X-Kryton-User`, `X-Kryton-Role`, `X-Kryton-Projects`, `X-Kryton-Proxy-Secret` |
+| `disabled` | Lab only (`KRYTON_ALLOW_INSECURE=true`) |
+
+**Minimal create flow:**
+
+```bash
+curl -sS -X POST "$KRYTON_URL/api/v1/machines" \
+  -H "Authorization: Bearer $KRYTON_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "project": "default",
+    "name": "win-app01",
+    "image": "windows-11-enterprise",
+    "compute": {"cpu": 4, "memoryMiB": 8192},
+    "disk": {"sizeGiB": 80, "storageClass": "rook-ceph-block"}
+  }'
+```
+
+Watch progress via `GET /api/v1/jobs` or `GET /api/v1/events/stream` (SSE).
+
+CLI equivalent: `KRYTON_URL=… KRYTON_TOKEN=… krytonctl …`.
 
 ---
 
@@ -123,6 +192,9 @@ Validate CPU and memory against the image catalog minimums. Names must be DNS-st
 | Start | POST | `/api/v1/machines/{id}/start?project=…` |
 | Stop | POST | `/api/v1/machines/{id}/stop?project=…` |
 | Snapshot | POST | `/api/v1/machines/{id}/snapshot?project=…` |
+| List snapshots | GET | `/api/v1/machines/{id}/snapshots?project=…` |
+| Restore snapshot | POST | `/api/v1/machines/{id}/snapshots/{sid}/restore?project=…` |
+| Delete snapshot | DELETE | `/api/v1/machines/{id}/snapshots/{sid}?project=…` |
 | Delete | DELETE | `/api/v1/machines/{id}?project=…` |
 
 ---
@@ -141,7 +213,9 @@ Common event types:
 | `io.kryton.machine.install.started` | Dockur install begins |
 | `io.kryton.machine.started` | Machine running |
 | `io.kryton.machine.stopped` | Machine stopped |
-| `io.kryton.machine.deleted` | Machine removed |
+| `io.kryton.snapshot.created` | Snapshot requested |
+| `io.kryton.snapshot.restored` | Restore requested |
+| `io.kryton.snapshot.deleted` | Snapshot deleted |
 
 ---
 

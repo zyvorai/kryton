@@ -99,6 +99,13 @@ func New(cfg Config) (*Client, error) {
 	return &Client{base: base, token: token, http: &http.Client{Transport: transport, Timeout: 20 * time.Second}}, nil
 }
 
+func (c *Client) Endpoint() string {
+	if c == nil || c.base == nil {
+		return ""
+	}
+	return c.base.String()
+}
+
 func (c *Client) Health(ctx context.Context) error {
 	var out map[string]any
 	return c.JSON(ctx, http.MethodGet, "/version", "", nil, &out)

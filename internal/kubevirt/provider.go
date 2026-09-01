@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/zyvorai/kryton/internal/id"
@@ -28,18 +29,45 @@ type Config struct {
 	Client          *kubeapi.Client
 	NamespacePrefix string
 	ImageNamespace  string
+	StorageClass    string
 }
 
 type Provider struct {
 	client                          *kubeapi.Client
 	namespacePrefix, imageNamespace string
+	mu                              sync.RWMutex
+	storageClass                    string
 }
 
 func New(cfg Config) *Provider {
-	return &Provider{client: cfg.Client, namespacePrefix: cfg.NamespacePrefix, imageNamespace: cfg.ImageNamespace}
+	return &Provider{client: cfg.Client, namespacePrefix: cfg.NamespacePrefix, imageNamespace: cfg.ImageNamespace, storageClass: cfg.StorageClass}
 }
 func (p *Provider) Name() string                    { return "kubevirt" }
 func (p *Provider) namespace(project string) string { return p.namespacePrefix + project }
+
+func (p *Provider) StorageClass() string {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.storageClass
+}
+
+func (p *Provider) SetStorageClass(name string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.storageClass = strings.TrimSpace(name)
+}
+
+func (p *Provider) SetImageNamespace(ns string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.imageNamespace = strings.TrimSpace(ns)
+}
+
+func (p *Provider) ImageNamespace() string {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.imageNamespace
+}
 
 func (p *Provider) Health(ctx context.Context) error {
 	if err := p.client.Health(ctx); err != nil {
@@ -91,6 +119,13 @@ func (p *Provider) Create(ctx context.Context, project string, spec model.Machin
 		iface = map[string]any{"name": "default", "bridge": map[string]any{}}
 		network = map[string]any{"name": "default", "multus": map[string]any{"networkName": spec.Network.NetworkID}}
 	}
+	storage := map[string]any{
+		"resources":   map[string]any{"requests": map[string]any{"storage": fmt.Sprintf("%dGi", spec.Disk.SizeGiB)}},
+		"accessModes": []any{"ReadWriteOnce"},
+	}
+	if sc := firstNonEmpty(spec.Disk.StorageClass, p.StorageClass()); sc != "" {
+		storage["storageClassName"] = sc
+	}
 	vm := map[string]any{
 		"apiVersion": "kubevirt.io/v1", "kind": "VirtualMachine",
 		"metadata": map[string]any{"name": spec.Name, "namespace": ns, "labels": labels, "annotations": annotations},
@@ -100,7 +135,7 @@ func (p *Provider) Create(ctx context.Context, project string, spec model.Machin
 				"metadata": map[string]any{"name": rootName},
 				"spec": map[string]any{
 					"sourceRef": map[string]any{"kind": "DataSource", "name": spec.Image, "namespace": p.imageNamespace},
-					"storage":   map[string]any{"resources": map[string]any{"requests": map[string]any{"storage": fmt.Sprintf("%dGi", spec.Disk.SizeGiB)}}, "accessModes": []any{"ReadWriteOnce"}},
+					"storage":   storage,
 				},
 			}},
 			"template": map[string]any{
@@ -232,6 +267,134 @@ func (p *Provider) Snapshot(ctx context.Context, project, machineID, name string
 		created = time.Now().UTC()
 	}
 	return &model.Snapshot{ID: snapshotID, Project: project, MachineID: machineID, Name: name, State: "creating", CreatedAt: created}, nil
+}
+
+func (p *Provider) ListSnapshots(ctx context.Context, project, machineID string) ([]model.Snapshot, error) {
+	m, err := p.Get(ctx, project, machineID)
+	if err != nil {
+		return nil, err
+	}
+	path := fmt.Sprintf("/apis/snapshot.kubevirt.io/v1beta1/namespaces/%s/virtualmachinesnapshots?labelSelector=%s", url.PathEscape(m.ProviderRef.Namespace), url.QueryEscape("kryton.io/machine-id="+machineID))
+	var list struct {
+		Items []map[string]any `json:"items"`
+	}
+	if err := p.client.JSON(ctx, http.MethodGet, path, "", nil, &list); err != nil {
+		return nil, err
+	}
+	out := make([]model.Snapshot, 0, len(list.Items))
+	for _, item := range list.Items {
+		out = append(out, mapVMSnapshot(project, machineID, item))
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].CreatedAt.After(out[j].CreatedAt) })
+	return out, nil
+}
+
+func (p *Provider) RestoreSnapshot(ctx context.Context, project, machineID, snapshotID string) (*model.Snapshot, error) {
+	m, err := p.Get(ctx, project, machineID)
+	if err != nil {
+		return nil, err
+	}
+	snap, obj, err := p.getVMSnapshot(ctx, project, machineID, snapshotID)
+	if err != nil {
+		return nil, err
+	}
+	if snap.State != "ready" {
+		return nil, fmt.Errorf("%w: snapshot %s is %s", provider.ErrUnsupported, snap.Name, snap.State)
+	}
+	if m.State == model.StateRunning || m.State == model.StateStarting {
+		if _, err := p.Stop(ctx, project, machineID); err != nil {
+			return nil, err
+		}
+	}
+	restoreName := sanitizeDNS("restore-"+snap.Name+"-"+time.Now().UTC().Format("150405"), 63)
+	body := map[string]any{
+		"apiVersion": "snapshot.kubevirt.io/v1beta1", "kind": "VirtualMachineRestore",
+		"metadata": map[string]any{"name": restoreName, "namespace": m.ProviderRef.Namespace, "labels": map[string]any{"kryton.io/snapshot-id": snap.ID, "kryton.io/machine-id": machineID, "app.kubernetes.io/managed-by": "kryton"}},
+		"spec": map[string]any{
+			"target":                      map[string]any{"apiGroup": "kubevirt.io", "kind": "VirtualMachine", "name": m.ProviderRef.Name},
+			"virtualMachineSnapshotName": nestedString(obj, "metadata", "name"),
+		},
+	}
+	path := fmt.Sprintf("/apis/snapshot.kubevirt.io/v1beta1/namespaces/%s/virtualmachinerestores", url.PathEscape(m.ProviderRef.Namespace))
+	if err := p.client.JSON(ctx, http.MethodPost, path, "application/json", body, nil); err != nil {
+		if kubeapi.IsConflict(err) {
+			return nil, provider.ErrConflict
+		}
+		return nil, err
+	}
+	snap.State = "restoring"
+	snap.Message = "VirtualMachineRestore " + restoreName + " requested"
+	return snap, nil
+}
+
+func (p *Provider) DeleteSnapshot(ctx context.Context, project, machineID, snapshotID string) error {
+	_, obj, err := p.getVMSnapshot(ctx, project, machineID, snapshotID)
+	if err != nil {
+		return err
+	}
+	ns := nestedString(obj, "metadata", "namespace")
+	name := nestedString(obj, "metadata", "name")
+	path := fmt.Sprintf("/apis/snapshot.kubevirt.io/v1beta1/namespaces/%s/virtualmachinesnapshots/%s", url.PathEscape(ns), url.PathEscape(name))
+	if err := p.client.JSON(ctx, http.MethodDelete, path, "application/json", map[string]any{"propagationPolicy": "Foreground"}, nil); err != nil {
+		if kubeapi.IsNotFound(err) {
+			return provider.ErrNotFound
+		}
+		return err
+	}
+	return nil
+}
+
+func (p *Provider) getVMSnapshot(ctx context.Context, project, machineID, snapshotID string) (*model.Snapshot, map[string]any, error) {
+	m, err := p.Get(ctx, project, machineID)
+	if err != nil {
+		return nil, nil, err
+	}
+	path := fmt.Sprintf("/apis/snapshot.kubevirt.io/v1beta1/namespaces/%s/virtualmachinesnapshots?labelSelector=%s", url.PathEscape(m.ProviderRef.Namespace), url.QueryEscape("kryton.io/machine-id="+machineID))
+	var list struct {
+		Items []map[string]any `json:"items"`
+	}
+	if err := p.client.JSON(ctx, http.MethodGet, path, "", nil, &list); err != nil {
+		return nil, nil, err
+	}
+	for _, item := range list.Items {
+		s := mapVMSnapshot(project, machineID, item)
+		if s.ID == snapshotID || nestedString(item, "metadata", "name") == snapshotID {
+			return &s, item, nil
+		}
+	}
+	return nil, nil, provider.ErrNotFound
+}
+
+func mapVMSnapshot(project, machineID string, obj map[string]any) model.Snapshot {
+	labels := anyStringMap(nestedMap(obj, "metadata")["labels"])
+	sid := labels["kryton.io/snapshot-id"]
+	name := nestedString(obj, "metadata", "name")
+	if sid == "" {
+		sid = name
+	}
+	status := nestedMap(obj, "status")
+	state := "creating"
+	if ready, ok := status["readyToUse"].(bool); ok && ready {
+		state = "ready"
+	}
+	switch stringAny(status["phase"]) {
+	case "Succeeded", "Ready":
+		state = "ready"
+	case "Failed":
+		state = "failed"
+	}
+	msg := ""
+	if errObj, ok := status["error"].(map[string]any); ok {
+		msg = stringAny(errObj["message"])
+		if msg != "" {
+			state = "failed"
+		}
+	}
+	created := parseTime(nestedString(obj, "metadata", "creationTimestamp"))
+	if created.IsZero() {
+		created = time.Now().UTC()
+	}
+	return model.Snapshot{ID: sid, Project: project, MachineID: machineID, Name: name, State: state, Message: msg, CreatedAt: created}
 }
 
 func (p *Provider) listVMs(ctx context.Context, project, selector string) ([]map[string]any, error) {
@@ -423,4 +586,11 @@ func trimDNS(v string, max int) string {
 	}
 	v = v[:max]
 	return strings.TrimRight(v, "-")
+}
+
+func firstNonEmpty(v, d string) string {
+	if strings.TrimSpace(v) != "" {
+		return v
+	}
+	return d
 }
