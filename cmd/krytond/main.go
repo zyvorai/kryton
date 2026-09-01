@@ -50,14 +50,24 @@ func main() {
 	}
 
 	var p provider.Provider
+	var kubeClient *kubeapi.Client
 	switch cfg.Provider {
 	case "kubevirt":
-		kc, err := kubeapi.New(kubeapi.Config{Endpoint: cfg.Kubernetes.Endpoint, BearerToken: cfg.Kubernetes.BearerToken, TokenFile: cfg.Kubernetes.TokenFile, CAFile: cfg.Kubernetes.CAFile, InsecureSkipVerify: cfg.Kubernetes.InsecureSkipVerify})
+		kc, err := kubeapi.New(kubeapi.Config{
+			Endpoint: cfg.Kubernetes.Endpoint, BearerToken: cfg.Kubernetes.BearerToken,
+			TokenFile: cfg.Kubernetes.TokenFile, CAFile: cfg.Kubernetes.CAFile,
+			ClientCertFile: cfg.Kubernetes.ClientCertFile, ClientKeyFile: cfg.Kubernetes.ClientKeyFile,
+			InsecureSkipVerify: cfg.Kubernetes.InsecureSkipVerify,
+		})
 		if err != nil {
 			log.Error("Kubernetes client failed", "error", err)
 			os.Exit(2)
 		}
+		kubeClient = kc
 		p = kubevirt.New(kubevirt.Config{Client: kc, NamespacePrefix: cfg.NamespacePrefix, ImageNamespace: cfg.ImageNamespace})
+		if err := kubevirt.EnsureNamespaces(context.Background(), kc, cfg.NamespacePrefix, cfg.Projects); err != nil {
+			log.Warn("project namespace bootstrap failed", "error", err)
+		}
 	case "dockur":
 		dp, err := dockur.New(dockur.Config{
 			Runtime: cfg.Dockur.Runtime, DataDir: cfg.Dockur.DataDir, PublicHost: cfg.Dockur.PublicHost,
@@ -77,12 +87,17 @@ func main() {
 		log.Error("embedded UI unavailable", "error", err)
 		os.Exit(2)
 	}
-	bus := events.New(500, cfg.EventWebhookURL, log)
+	bus, err := events.New(500, cfg.EventWebhookURL, cfg.EventWebhookSecret, cfg.EventsFile, log)
+	if err != nil {
+		log.Error("event bus failed", "error", err)
+		os.Exit(2)
+	}
 	m := metrics.New()
 	h := api.New(api.Config{
 		Provider: p, Catalog: cat, Events: bus, Auth: authn, Metrics: m, Web: web,
 		Projects: cfg.Projects, DefaultProject: cfg.DefaultProject, AuthMode: cfg.AuthMode,
-		DockurDataDir: cfg.Dockur.DataDir, DockurRuntime: cfg.Dockur.Runtime, Log: log,
+		DockurDataDir: cfg.Dockur.DataDir, DockurRuntime: cfg.Dockur.Runtime,
+		ImageNamespace: cfg.ImageNamespace, NamespacePrefix: cfg.NamespacePrefix, KubeClient: kubeClient, Log: log,
 	}).Handler()
 	server := &http.Server{Addr: cfg.Addr, Handler: h, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 0, IdleTimeout: 120 * time.Second, MaxHeaderBytes: 1 << 20}
 

@@ -25,6 +25,11 @@ func TestCreateAndLifecycleUsesKubernetesREST(t *testing.T) {
 			io.WriteString(w, `{"gitVersion":"v1.36.0"}`)
 		case r.Method == "GET" && r.URL.Path == "/apis/kubevirt.io/v1":
 			io.WriteString(w, `{"kind":"APIResourceList"}`)
+		case r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/v1/namespaces/"):
+			http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
+		case r.Method == "POST" && r.URL.Path == "/api/v1/namespaces":
+			w.WriteHeader(http.StatusCreated)
+			io.WriteString(w, `{"metadata":{"name":"finance"}}`)
 		case r.Method == "POST" && r.URL.Path == "/apis/kubevirt.io/v1/namespaces/finance/virtualmachines":
 			_ = json.NewDecoder(r.Body).Decode(&created)
 			created["status"] = map[string]any{"printableStatus": "Starting"}

@@ -50,10 +50,28 @@ func (p *Provider) Health(ctx context.Context) error {
 }
 
 func (p *Provider) Capabilities(context.Context) (model.Capabilities, error) {
-	return model.Capabilities{Provider: p.Name(), Snapshots: true, Networks: true, TTL: true, LiveMigration: false, Console: false}, nil
+	return model.Capabilities{Provider: p.Name(), Snapshots: true, Networks: true, TTL: true, LiveMigration: false, Console: true}, nil
+}
+
+func (p *Provider) ConsoleTarget(ctx context.Context, project, machineID string) (*provider.ConsoleTarget, error) {
+	m, err := p.Get(ctx, project, machineID)
+	if err != nil {
+		return nil, err
+	}
+	if m.ProviderRef.Name == "" || m.ProviderRef.Namespace == "" {
+		return nil, provider.ErrNotFound
+	}
+	vmi := p.getVMI(ctx, project, m.ProviderRef.Name)
+	if vmi == nil {
+		return nil, fmt.Errorf("console unavailable: guest instance is not running yet")
+	}
+	return &provider.ConsoleTarget{Namespace: m.ProviderRef.Namespace, Name: m.ProviderRef.Name, Kind: "vnc"}, nil
 }
 
 func (p *Provider) Create(ctx context.Context, project string, spec model.MachineSpec) (*model.Machine, error) {
+	if err := EnsureNamespaces(ctx, p.client, p.namespacePrefix, []string{project}); err != nil {
+		return nil, err
+	}
 	machineID := id.New()
 	ns := p.namespace(project)
 	rootName := trimDNS(spec.Name+"-root", 63)
@@ -278,6 +296,9 @@ func (p *Provider) mapVM(project string, vm, vmi map[string]any) model.Machine {
 	}
 	m.IPAddresses = vmiIPs(vmi)
 	m.Conditions = vmConditions(vm)
+	if vmi != nil && m.ID != "" {
+		m.ConsoleURL = fmt.Sprintf("/api/v1/machines/%s/console?project=%s", m.ID, url.QueryEscape(project))
+	}
 	return m
 }
 

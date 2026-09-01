@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kryton-images
+  labels:
+    app.kubernetes.io/managed-by: kryton
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kryton
+  labels:
+    app.kubernetes.io/managed-by: kryton

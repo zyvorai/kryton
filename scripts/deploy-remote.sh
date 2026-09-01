@@ -67,10 +67,10 @@ Environment:
   DEPLOY_DIR           Override remote staging dir (default: ~/.deployments/kryton)
 
 Examples:
-  $0 10.0.0.5 root --key
-  $0 sus@175.110.122.71 --quick
-  $0 10.0.0.5 root --build-local --quick
-  make deploy-remote H=10.0.0.5 U=root
+  $0 <user>@<host> --key
+  $0 <user>@<host> --quick
+  $0 <user>@<host> --build-local --quick
+  make deploy-remote H=<host> U=<user>
 EOF
 }
 

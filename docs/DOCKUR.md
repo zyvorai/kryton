@@ -26,7 +26,7 @@ Run `krytonctl doctor` to validate all of the above before creating machines.
 export KRYTON_PROVIDER=dockur
 export KRYTON_AUTH_MODE=disabled          # lab only; use apikey on shared hosts
 export KRYTON_DOCKUR_RUNTIME=docker       # or podman
-export KRYTON_DOCKUR_PUBLIC_HOST=10.0.0.5 # IP/hostname clients use for console + RDP
+export KRYTON_DOCKUR_PUBLIC_HOST=<host> # hostname/IP clients use for console + RDP
 export KRYTON_DOCKUR_DATA_DIR=$HOME/.kryton/dockur
 
 krytond

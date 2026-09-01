@@ -1,0 +1,22 @@
+# Lab profile: KubeVirt provider, auth off, NodePort API exposure.
+provider: kubevirt
+projects: [default]
+defaultProject: default
+imageNamespace: kryton-images
+
+auth:
+  mode: disabled
+  allowInsecure: true
+
+service:
+  type: NodePort
+  port: 80
+  targetPort: 8080
+  nodePort: 30088
+
+image:
+  repository: kryton
+  tag: local
+  pullPolicy: IfNotPresent
+
+replicaCount: 1

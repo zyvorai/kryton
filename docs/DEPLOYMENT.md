@@ -2,6 +2,8 @@
 
 For a lab host over SSH (demo or dockur provider + systemd), see **[DEPLOY-REMOTE.md](DEPLOY-REMOTE.md)** and **[DOCKUR.md](DOCKUR.md)**.
 
+For automated Windows 11 on KubeVirt, see **[KUBEVIRT.md](KUBEVIRT.md)** (`./scripts/setup-kubevirt.sh`).
+
 This guide covers the **KubeVirt** production path with Helm.
 
 ---

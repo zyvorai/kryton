@@ -15,39 +15,46 @@ import (
 	"github.com/zyvorai/kryton/internal/catalog"
 	"github.com/zyvorai/kryton/internal/doctor"
 	"github.com/zyvorai/kryton/internal/events"
+	"github.com/zyvorai/kryton/internal/kubeapi"
 	"github.com/zyvorai/kryton/internal/metrics"
 	"github.com/zyvorai/kryton/internal/model"
 	"github.com/zyvorai/kryton/internal/provider"
 )
 
 type Config struct {
-	Provider       provider.Provider
-	Catalog        *catalog.Catalog
-	Events         *events.Bus
-	Auth           *auth.Authenticator
-	Metrics        *metrics.Metrics
-	Web            fs.FS
-	Projects       []string
-	DefaultProject string
-	AuthMode       string
-	DockurDataDir  string
-	DockurRuntime  string
-	Log            *slog.Logger
+	Provider        provider.Provider
+	Catalog         *catalog.Catalog
+	Events          *events.Bus
+	Auth            *auth.Authenticator
+	Metrics         *metrics.Metrics
+	Web             fs.FS
+	Projects        []string
+	DefaultProject  string
+	AuthMode        string
+	DockurDataDir   string
+	DockurRuntime   string
+	ImageNamespace  string
+	NamespacePrefix string
+	KubeClient      *kubeapi.Client
+	Log             *slog.Logger
 }
 
 type Server struct {
-	p              provider.Provider
-	catalog        *catalog.Catalog
-	events         *events.Bus
-	auth           *auth.Authenticator
-	metrics        *metrics.Metrics
-	web            fs.FS
-	projects       []string
-	defaultProject string
-	authMode       string
-	dockurDataDir  string
-	dockurRuntime  string
-	log            *slog.Logger
+	p               provider.Provider
+	catalog         *catalog.Catalog
+	events          *events.Bus
+	auth            *auth.Authenticator
+	metrics         *metrics.Metrics
+	web             fs.FS
+	projects        []string
+	defaultProject  string
+	authMode        string
+	dockurDataDir   string
+	dockurRuntime   string
+	imageNamespace  string
+	namespacePrefix string
+	kubeClient      *kubeapi.Client
+	log             *slog.Logger
 }
 
 type createRequest struct {
@@ -73,7 +80,8 @@ func New(cfg Config) *Server {
 	return &Server{
 		p: cfg.Provider, catalog: cfg.Catalog, events: cfg.Events, auth: cfg.Auth, metrics: cfg.Metrics, web: cfg.Web,
 		projects: cfg.Projects, defaultProject: cfg.DefaultProject, authMode: cfg.AuthMode,
-		dockurDataDir: cfg.DockurDataDir, dockurRuntime: cfg.DockurRuntime, log: cfg.Log,
+		dockurDataDir: cfg.DockurDataDir, dockurRuntime: cfg.DockurRuntime, imageNamespace: cfg.ImageNamespace,
+		namespacePrefix: cfg.NamespacePrefix, kubeClient: cfg.KubeClient, log: cfg.Log,
 	}
 }
 
@@ -88,6 +96,8 @@ func (s *Server) Handler() http.Handler {
 	apiMux.HandleFunc("GET /api/v1/machines", s.listMachines)
 	apiMux.HandleFunc("POST /api/v1/machines", s.createMachine)
 	apiMux.HandleFunc("GET /api/v1/machines/{id}", s.getMachine)
+	apiMux.HandleFunc("GET /api/v1/machines/{id}/console", s.machineConsole)
+	apiMux.HandleFunc("GET /api/v1/machines/{id}/vnc", s.machineVNC)
 	apiMux.HandleFunc("DELETE /api/v1/machines/{id}", s.deleteMachine)
 	apiMux.HandleFunc("POST /api/v1/machines/{id}/start", s.startMachine)
 	apiMux.HandleFunc("POST /api/v1/machines/{id}/stop", s.stopMachine)
@@ -122,12 +132,15 @@ func (s *Server) capabilities(w http.ResponseWriter, r *http.Request) {
 }
 func (s *Server) doctor(w http.ResponseWriter, r *http.Request) {
 	report := doctor.Run(r.Context(), doctor.Input{
-		Provider:  s.p,
-		Catalog:   s.catalog,
-		AuthMode:  s.authMode,
-		Projects:  s.projects,
-		DockurDir: s.dockurDataDir,
-		Runtime:   s.dockurRuntime,
+		Provider:        s.p,
+		Catalog:         s.catalog,
+		AuthMode:        s.authMode,
+		Projects:        s.projects,
+		DockurDir:       s.dockurDataDir,
+		Runtime:         s.dockurRuntime,
+		KubeClient:      s.kubeClient,
+		ImageNamespace:  s.imageNamespace,
+		NamespacePrefix: s.namespacePrefix,
 	})
 	status := http.StatusOK
 	if !report.Healthy {

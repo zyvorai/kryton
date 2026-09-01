@@ -3,6 +3,9 @@ package events
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -24,20 +27,38 @@ type Event struct {
 }
 
 type Bus struct {
-	mu         sync.RWMutex
-	history    []Event
-	maxHistory int
-	subs       map[chan Event]struct{}
-	webhook    string
-	http       *http.Client
-	log        *slog.Logger
+	mu            sync.RWMutex
+	history       []Event
+	maxHistory    int
+	subs          map[chan Event]struct{}
+	webhook       string
+	webhookSecret string
+	store         *fileStore
+	http          *http.Client
+	log           *slog.Logger
 }
 
-func New(maxHistory int, webhook string, log *slog.Logger) *Bus {
+func New(maxHistory int, webhook, webhookSecret, filePath string, log *slog.Logger) (*Bus, error) {
 	if maxHistory < 1 {
 		maxHistory = 500
 	}
-	return &Bus{maxHistory: maxHistory, subs: map[chan Event]struct{}{}, webhook: webhook, http: &http.Client{Timeout: 3 * time.Second}, log: log}
+	store, err := openFileStore(filePath)
+	if err != nil {
+		return nil, err
+	}
+	b := &Bus{
+		maxHistory: maxHistory, subs: map[chan Event]struct{}{},
+		webhook: webhook, webhookSecret: webhookSecret, store: store,
+		http: &http.Client{Timeout: 3 * time.Second}, log: log,
+	}
+	if store != nil {
+		loaded, err := loadFileStore(filePath, maxHistory)
+		if err != nil {
+			return nil, err
+		}
+		b.history = loaded
+	}
+	return b, nil
 }
 
 func (b *Bus) Publish(ctx context.Context, eventType, subject string, data map[string]any) Event {
@@ -54,6 +75,11 @@ func (b *Bus) Publish(ctx context.Context, eventType, subject string, data map[s
 		}
 	}
 	b.mu.Unlock()
+	if b.store != nil {
+		if err := b.store.append(e); err != nil && b.log != nil {
+			b.log.Warn("event persist failed", "error", err)
+		}
+	}
 	if b.webhook != "" {
 		b.deliverWebhook(ctx, e)
 	}
@@ -99,6 +125,11 @@ func (b *Bus) deliverWebhook(parent context.Context, e Event) {
 		return
 	}
 	req.Header.Set("Content-Type", "application/cloudevents+json")
+	if b.webhookSecret != "" {
+		mac := hmac.New(sha256.New, []byte(b.webhookSecret))
+		_, _ = mac.Write(body)
+		req.Header.Set("X-Kryton-Signature", "sha256="+hex.EncodeToString(mac.Sum(nil)))
+	}
 	res, err := b.http.Do(req)
 	if err != nil {
 		b.log.Warn("event webhook failed", "error", err)

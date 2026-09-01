@@ -10,13 +10,13 @@ Ideal for lab control planes, integration testing, and staging before Helm/KubeV
 
 ```bash
 # SSH key (recommended)
-./scripts/deploy-remote.sh sus@175.110.122.71 --key
+./scripts/deploy-remote.sh <user>@<host> --key
 
 # Or via Makefile
-make deploy-remote H=175.110.122.71 U=sus ARGS='--key'
+make deploy-remote H=<host> U=<user> ARGS='--key'
 
 # Fast iterate (skip Go install when already present)
-./scripts/deploy-remote.sh sus@10.0.0.5 --quick --key
+./scripts/deploy-remote.sh <user>@<host> --quick --key
 ```
 
 After a successful deploy the demo control plane listens on port **8080** (override with `KRYTON_PORT`):

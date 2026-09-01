@@ -10,7 +10,7 @@ One stable machine API. Kubernetes, KubeVirt, and dockur stay behind the provide
 [![License: Apache-2.0](https://img.shields.io/github/license/zyvorai/kryton)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
 
-[Quick start](#quick-start) · [Install](#install) · [Remote deploy](#remote-deploy) · [Dockur lab](#dockur-lab-provider) · [Helm](#helm-kubevirt) · [API](#api) · [Docs](docs/)
+[Quick start](#quick-start) · [Install](#install) · [KubeVirt](#kubevirt-windows-vms) · [Remote deploy](#remote-deploy) · [Dockur lab](#dockur-lab-provider) · [Helm](#helm-kubevirt) · [API](#api) · [Docs](docs/)
 
 </div>
 
@@ -104,6 +104,21 @@ docker run --rm -p 8080:8080 \
 | `make check` | fmt · test · vet · build |
 | `make image` | Docker image `kryton:dev` |
 | `make deploy-remote H=… U=…` | SSH deploy (see below) |
+| `make setup-kubevirt IMAGE=…` | Bootstrap KubeVirt + API + Windows 11 VM |
+
+---
+
+## KubeVirt Windows VMs
+
+Create real Windows 11 guests on Kubernetes through the Kryton API — fully automated:
+
+```bash
+export KRYTON_WINDOWS_IMAGE=/path/to/windows11.qcow2
+./scripts/setup-kubevirt.sh
+# API on :9088 — create/list/start/stop via REST or krytonctl
+```
+
+See **[docs/KUBEVIRT.md](docs/KUBEVIRT.md)** for Helm mode, bootstrap-only, and production auth.
 
 ---
 
@@ -112,9 +127,9 @@ docker run --rm -p 8080:8080 \
 Same pattern as GuestKit: **SSH + rsync → build on the host → systemd demo unit**.
 
 ```bash
-./scripts/deploy-remote.sh sus@175.110.122.71 --key
+./scripts/deploy-remote.sh <user>@<host> --key
 # or
-make deploy-remote H=175.110.122.71 U=sus ARGS='--quick --key'
+make deploy-remote H=<host> U=<user> ARGS='--quick --key'
 ```
 
 | Flag | Meaning |
@@ -220,6 +235,9 @@ OpenAPI: [`openapi.yaml`](openapi.yaml).
 | `KRYTON_ADDR` | `:8080` | Listen address |
 | `KRYTON_DOCKUR_RUNTIME` | `docker` | `docker` or `podman` |
 | `KRYTON_DOCKUR_DATA_DIR` | *(temp)* | Compose state directory |
+| `KRYTON_KUBECONFIG` | `~/.kube/config` | Kubernetes credentials (kubevirt provider) |
+| `KRYTON_EVENTS_FILE` | *(memory only)* | Append-only JSONL audit log (survives restarts) |
+| `KRYTON_EVENT_WEBHOOK_SECRET` | *(none)* | HMAC-SHA256 signature for webhook payloads |
 | `KRYTON_DOCKUR_PUBLIC_HOST` | `127.0.0.1` | Hostname/IP for console URLs |
 
 Run `krytonctl doctor` after changing provider settings to validate the environment.

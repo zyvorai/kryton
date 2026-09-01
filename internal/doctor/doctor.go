@@ -11,17 +11,22 @@ import (
 	"time"
 
 	"github.com/zyvorai/kryton/internal/catalog"
+	"github.com/zyvorai/kryton/internal/kubeapi"
+	"github.com/zyvorai/kryton/internal/kubevirt"
 	"github.com/zyvorai/kryton/internal/model"
 	"github.com/zyvorai/kryton/internal/provider"
 )
 
 type Input struct {
-	Provider  provider.Provider
-	Catalog   *catalog.Catalog
-	AuthMode  string
-	Projects  []string
-	DockurDir string
-	Runtime   string // docker | podman
+	Provider        provider.Provider
+	Catalog         *catalog.Catalog
+	AuthMode        string
+	Projects        []string
+	DockurDir       string
+	Runtime         string // docker | podman
+	KubeClient      *kubeapi.Client
+	ImageNamespace  string
+	NamespacePrefix string
 }
 
 func Run(ctx context.Context, in Input) model.DoctorReport {
@@ -40,7 +45,8 @@ func Run(ctx context.Context, in Input) model.DoctorReport {
 		add(checkKVM())
 		add(checkDirWritable(firstNonEmpty(in.DockurDir, filepath.Join(os.TempDir(), "kryton-dockur"))))
 	case "kubevirt":
-		add(checkHint("kubevirt-images", "warn", "Confirm CDI DataSources exist for each catalog image ID", "See docs/DEPLOYMENT.md image contract"))
+		add(checkKubeVirtImages(ctx, in.KubeClient, in.Catalog, in.ImageNamespace))
+		add(checkKubeVirtNamespaces(ctx, in.KubeClient, in.NamespacePrefix, in.Projects))
 	case "demo":
 		add(model.DoctorFinding{Check: "demo-provider", Status: "pass", Message: "In-memory demo provider is active (no real Windows guests)"})
 	}
@@ -150,6 +156,52 @@ func checkDirWritable(dir string) model.DoctorFinding {
 
 func checkHint(name, status, message, hint string) model.DoctorFinding {
 	return model.DoctorFinding{Check: name, Status: status, Message: message, Hint: hint}
+}
+
+func checkKubeVirtImages(ctx context.Context, kc *kubeapi.Client, cat *catalog.Catalog, imageNS string) model.DoctorFinding {
+	if kc == nil {
+		return checkHint("kubevirt-images", "warn", "CDI DataSource check skipped (no Kubernetes client)", "Run scripts/bootstrap-kubevirt-images.sh")
+	}
+	if imageNS == "" {
+		imageNS = "kryton-images"
+	}
+	if cat == nil || len(cat.List()) == 0 {
+		return model.DoctorFinding{Check: "kubevirt-images", Status: "fail", Message: "Image catalog is empty"}
+	}
+	missing := []string{}
+	for _, img := range cat.List() {
+		path := fmt.Sprintf("/apis/cdi.kubevirt.io/v1beta1/namespaces/%s/datasources/%s", imageNS, img.ID)
+		var out map[string]any
+		if err := kc.JSON(ctx, "GET", path, "", nil, &out); err != nil {
+			if kubeapi.IsNotFound(err) {
+				missing = append(missing, img.ID)
+				continue
+			}
+			return model.DoctorFinding{Check: "kubevirt-images", Status: "fail", Message: err.Error(), Hint: "Confirm CDI is installed and Kryton can read DataSources"}
+		}
+	}
+	if len(missing) > 0 {
+		return model.DoctorFinding{
+			Check: "kubevirt-images", Status: "fail",
+			Message: fmt.Sprintf("Missing DataSources in %s: %s", imageNS, strings.Join(missing, ", ")),
+			Hint:    "Run scripts/bootstrap-kubevirt-images.sh with KRYTON_WINDOWS_IMAGE set",
+		}
+	}
+	return model.DoctorFinding{Check: "kubevirt-images", Status: "pass", Message: fmt.Sprintf("All %d catalog image(s) have CDI DataSources in %s", len(cat.List()), imageNS)}
+}
+
+func checkKubeVirtNamespaces(ctx context.Context, kc *kubeapi.Client, prefix string, projects []string) model.DoctorFinding {
+	if kc == nil {
+		return checkHint("kubevirt-namespaces", "warn", "Namespace check skipped (no Kubernetes client)", "Kryton auto-creates project namespaces on startup when using kubevirt")
+	}
+	missing, err := kubevirt.MissingNamespaces(ctx, kc, prefix, projects)
+	if err != nil {
+		return model.DoctorFinding{Check: "kubevirt-namespaces", Status: "fail", Message: err.Error()}
+	}
+	if len(missing) > 0 {
+		return model.DoctorFinding{Check: "kubevirt-namespaces", Status: "fail", Message: fmt.Sprintf("Missing namespaces: %s", strings.Join(missing, ", ")), Hint: "Restart krytond or run scripts/setup-kubevirt.sh to auto-create project namespaces"}
+	}
+	return model.DoctorFinding{Check: "kubevirt-namespaces", Status: "pass", Message: fmt.Sprintf("%d project namespace(s) ready", len(projects))}
 }
 
 func firstNonEmpty(v, d string) string {

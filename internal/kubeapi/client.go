@@ -21,6 +21,8 @@ type Config struct {
 	BearerToken        string
 	TokenFile          string
 	CAFile             string
+	ClientCertFile     string
+	ClientKeyFile      string
 	InsecureSkipVerify bool
 }
 
@@ -72,6 +74,13 @@ func New(cfg Config) (*Client, error) {
 	}
 
 	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: cfg.InsecureSkipVerify} //nolint:gosec -- explicit operator setting
+	if cfg.ClientCertFile != "" && cfg.ClientKeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(cfg.ClientCertFile, cfg.ClientKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("load Kubernetes client certificate: %w", err)
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
 	if cfg.CAFile != "" {
 		if pem, err := os.ReadFile(cfg.CAFile); err == nil {
 			pool, err := x509.SystemCertPool()

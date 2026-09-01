@@ -8,28 +8,31 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zyvorai/kryton/internal/kubeapi"
 	"github.com/zyvorai/kryton/internal/model"
 )
 
 type Config struct {
-	Addr              string
-	Provider          string
-	Projects          []string
-	DefaultProject    string
-	ImageNamespace    string
-	NamespacePrefix   string
-	ImagesFile        string
-	AuthMode          string
-	APIKeysFile       string
-	ProxySecretFile   string
-	TrustProxy        bool
-	AllowInsecure     bool
-	EventWebhookURL   string
-	ReconcileInterval time.Duration
-	ShutdownTimeout   time.Duration
-	Kubernetes        Kubernetes
-	TLS               TLS
-	Dockur            Dockur
+	Addr               string
+	Provider           string
+	Projects           []string
+	DefaultProject     string
+	ImageNamespace     string
+	NamespacePrefix    string
+	ImagesFile         string
+	AuthMode           string
+	APIKeysFile        string
+	ProxySecretFile    string
+	TrustProxy         bool
+	AllowInsecure      bool
+	EventWebhookURL    string
+	EventWebhookSecret string
+	EventsFile         string
+	ReconcileInterval  time.Duration
+	ShutdownTimeout    time.Duration
+	Kubernetes         Kubernetes
+	TLS                TLS
+	Dockur             Dockur
 }
 
 type Dockur struct {
@@ -45,6 +48,8 @@ type Kubernetes struct {
 	BearerToken        string
 	TokenFile          string
 	CAFile             string
+	ClientCertFile     string
+	ClientKeyFile      string
 	InsecureSkipVerify bool
 }
 
@@ -57,26 +62,30 @@ type TLS struct {
 func Load() (Config, error) {
 	projects := splitCSV(getenv("KRYTON_PROJECTS", "default"))
 	cfg := Config{
-		Addr:              getenv("KRYTON_ADDR", ":8080"),
-		Provider:          strings.ToLower(getenv("KRYTON_PROVIDER", "demo")),
-		Projects:          projects,
-		DefaultProject:    getenv("KRYTON_DEFAULT_PROJECT", first(projects, "default")),
-		ImageNamespace:    getenv("KRYTON_IMAGE_NAMESPACE", "kryton-images"),
-		NamespacePrefix:   getenv("KRYTON_NAMESPACE_PREFIX", ""),
-		ImagesFile:        os.Getenv("KRYTON_IMAGES_FILE"),
-		AuthMode:          strings.ToLower(getenv("KRYTON_AUTH_MODE", "disabled")),
-		APIKeysFile:       os.Getenv("KRYTON_API_KEYS_FILE"),
-		ProxySecretFile:   os.Getenv("KRYTON_PROXY_SECRET_FILE"),
-		TrustProxy:        boolEnv("KRYTON_TRUST_PROXY", false),
-		AllowInsecure:     boolEnv("KRYTON_ALLOW_INSECURE", false),
-		EventWebhookURL:   os.Getenv("KRYTON_EVENT_WEBHOOK_URL"),
-		ReconcileInterval: durationEnv("KRYTON_RECONCILE_INTERVAL", 30*time.Second),
-		ShutdownTimeout:   durationEnv("KRYTON_SHUTDOWN_TIMEOUT", 15*time.Second),
+		Addr:               getenv("KRYTON_ADDR", ":8080"),
+		Provider:           strings.ToLower(getenv("KRYTON_PROVIDER", "demo")),
+		Projects:           projects,
+		DefaultProject:     getenv("KRYTON_DEFAULT_PROJECT", first(projects, "default")),
+		ImageNamespace:     getenv("KRYTON_IMAGE_NAMESPACE", "kryton-images"),
+		NamespacePrefix:    getenv("KRYTON_NAMESPACE_PREFIX", ""),
+		ImagesFile:         os.Getenv("KRYTON_IMAGES_FILE"),
+		AuthMode:           strings.ToLower(getenv("KRYTON_AUTH_MODE", "disabled")),
+		APIKeysFile:        os.Getenv("KRYTON_API_KEYS_FILE"),
+		ProxySecretFile:    os.Getenv("KRYTON_PROXY_SECRET_FILE"),
+		TrustProxy:         boolEnv("KRYTON_TRUST_PROXY", false),
+		AllowInsecure:      boolEnv("KRYTON_ALLOW_INSECURE", false),
+		EventWebhookURL:    os.Getenv("KRYTON_EVENT_WEBHOOK_URL"),
+		EventWebhookSecret: os.Getenv("KRYTON_EVENT_WEBHOOK_SECRET"),
+		EventsFile:         os.Getenv("KRYTON_EVENTS_FILE"),
+		ReconcileInterval:  durationEnv("KRYTON_RECONCILE_INTERVAL", 30*time.Second),
+		ShutdownTimeout:    durationEnv("KRYTON_SHUTDOWN_TIMEOUT", 15*time.Second),
 		Kubernetes: Kubernetes{
 			Endpoint:           os.Getenv("KRYTON_KUBERNETES_ENDPOINT"),
 			BearerToken:        os.Getenv("KRYTON_KUBERNETES_BEARER_TOKEN"),
 			TokenFile:          getenv("KRYTON_KUBERNETES_TOKEN_FILE", "/var/run/secrets/kubernetes.io/serviceaccount/token"),
 			CAFile:             getenv("KRYTON_KUBERNETES_CA_FILE", "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"),
+			ClientCertFile:     os.Getenv("KRYTON_KUBERNETES_CLIENT_CERT_FILE"),
+			ClientKeyFile:      os.Getenv("KRYTON_KUBERNETES_CLIENT_KEY_FILE"),
 			InsecureSkipVerify: boolEnv("KRYTON_KUBERNETES_INSECURE_SKIP_VERIFY", false),
 		},
 		TLS: TLS{
@@ -91,6 +100,11 @@ func Load() (Config, error) {
 			HTTPBase:   intEnv("KRYTON_DOCKUR_HTTP_BASE", 18006),
 			RDPBase:    intEnv("KRYTON_DOCKUR_RDP_BASE", 13389),
 		},
+	}
+	if cfg.Provider == "kubevirt" {
+		if err := cfg.resolveKubernetes(); err != nil {
+			return Config{}, err
+		}
 	}
 	if err := cfg.Validate(); err != nil {
 		return Config{}, err
@@ -150,6 +164,42 @@ func (c Config) Validate() error {
 	}
 	if (c.TLS.CertFile == "") != (c.TLS.KeyFile == "") {
 		return errors.New("both KRYTON_TLS_CERT_FILE and KRYTON_TLS_KEY_FILE must be set together")
+	}
+	return nil
+}
+
+func (c *Config) resolveKubernetes() error {
+	if strings.TrimSpace(c.Kubernetes.Endpoint) != "" {
+		return nil
+	}
+	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
+		return nil
+	}
+	path := strings.TrimSpace(os.Getenv("KRYTON_KUBECONFIG"))
+	if path == "" {
+		path = strings.TrimSpace(os.Getenv("KUBECONFIG"))
+	}
+	kc, err := kubeapi.FromKubeconfig(path)
+	if err != nil {
+		return fmt.Errorf("kubernetes config: %w (set KRYTON_KUBERNETES_ENDPOINT or KRYTON_KUBECONFIG)", err)
+	}
+	if c.Kubernetes.BearerToken == "" {
+		c.Kubernetes.BearerToken = kc.BearerToken
+	}
+	if c.Kubernetes.CAFile == "" || c.Kubernetes.CAFile == "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt" {
+		if kc.CAFile != "" {
+			c.Kubernetes.CAFile = kc.CAFile
+		}
+	}
+	if c.Kubernetes.ClientCertFile == "" {
+		c.Kubernetes.ClientCertFile = kc.ClientCertFile
+	}
+	if c.Kubernetes.ClientKeyFile == "" {
+		c.Kubernetes.ClientKeyFile = kc.ClientKeyFile
+	}
+	c.Kubernetes.Endpoint = kc.Endpoint
+	if kc.InsecureSkipVerify {
+		c.Kubernetes.InsecureSkipVerify = true
 	}
 	return nil
 }

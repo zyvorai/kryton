@@ -29,7 +29,10 @@ func testServer(t *testing.T) (http.Handler, *events.Bus) {
 		t.Fatal(err)
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	bus := events.New(100, "", log)
+	bus, err := events.New(100, "", "", "", log)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var web fs.FS = fstest.MapFS{"index.html": {Data: []byte("ok")}}
 	s := New(Config{Provider: demo.New(), Catalog: cat, Events: bus, Auth: a, Metrics: metrics.New(), Web: web, Projects: []string{"default"}, DefaultProject: "default", AuthMode: "disabled", Log: log})
 	return s.Handler(), bus

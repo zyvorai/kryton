@@ -7,6 +7,9 @@ metadata:
   labels:
     {{- include "kryton.labels" . | nindent 4 }}
 rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "create"]
   - apiGroups: ["kubevirt.io"]
     resources: ["virtualmachines"]
     verbs: ["get", "list", "watch", "create", "patch", "delete"]
@@ -19,6 +22,9 @@ rules:
   - apiGroups: ["cdi.kubevirt.io"]
     resources: ["datasources"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: ["subresources.kubevirt.io"]
+    resources: ["virtualmachineinstances/vnc"]
+    verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
