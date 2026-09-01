@@ -1,0 +1,15 @@
+{
+  "images": [
+    {
+      "id": "windows-server-2025",
+      "name": "Windows Server 2025",
+      "version": "2025",
+      "family": "windows-server",
+      "description": "Administrator-managed enterprise Windows Server image.",
+      "minCpu": 2,
+      "minMemoryMiB": 4096,
+      "defaultDiskGiB": 80,
+      "tags": ["server", "enterprise"]
+    }
+  ]
+}

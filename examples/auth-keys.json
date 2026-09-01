@@ -1,0 +1,10 @@
+{
+  "keys": [
+    {
+      "name": "platform-automation",
+      "sha256": "REPLACE_WITH_OUTPUT_OF_krytonctl_hash-token",
+      "role": "operator",
+      "projects": ["default"]
+    }
+  ]
+}

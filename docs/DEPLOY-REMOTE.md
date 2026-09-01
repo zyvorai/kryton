@@ -1,0 +1,70 @@
+# Remote deployment
+
+Deploy Kryton to a Linux host over SSH with the same workflow style as GuestKit: **rsync → build → install → verify**.
+
+## Quick start
+
+```bash
+# SSH key (recommended)
+./scripts/deploy-remote.sh sus@175.110.122.71 --key
+
+# Or via Makefile
+make deploy-remote H=175.110.122.71 U=sus ARGS='--key'
+
+# Fast iterate (skip Go install when already present)
+./scripts/deploy-remote.sh sus@10.0.0.5 --quick --key
+```
+
+After a successful deploy the demo control plane listens on port **8080** (override with `KRYTON_PORT`):
+
+```text
+http://<host>:8080/
+```
+
+If the port is firewalled, tunnel:
+
+```bash
+ssh -L 8080:127.0.0.1:8080 sus@<host>
+open http://localhost:8080
+```
+
+## Profiles
+
+| Profile | Flags | What it does |
+|---------|-------|----------------|
+| Full | *(default)* | rsync → install Go if needed → `go build` → `/usr/local/bin` → systemd `kryton.service` (demo provider) |
+| Quick | `--quick` | rsync → build on remote (skip Go install when `go` exists) |
+| Quick + local binary | `--quick --build-local` | build on Linux laptop, rsync `bin/krytond` + `bin/krytonctl` only |
+| Preflight | `--preflight-only` | SSH, disk, sudo checks |
+| Verify | `--verify-only` | hit `/readyz` |
+| Binaries only | `--no-service` | install CLIs/daemon without enabling systemd |
+| Uninstall | `--uninstall` | stop unit, remove binaries and staging dir |
+
+## What gets installed
+
+| Path | Purpose |
+|------|---------|
+| `/usr/local/bin/krytond` | Control plane |
+| `/usr/local/bin/krytonctl` | CLI |
+| `/etc/systemd/system/kryton.service` | Demo unit (`KRYTON_PROVIDER=demo`, auth disabled) |
+| `~/.deployments/kryton` | Remote source checkout (override with `DEPLOY_DIR`) |
+
+The systemd unit is intentionally a **lab demo**. For production KubeVirt, use Helm (`deploy/helm/kryton`) and set `KRYTON_PROVIDER=kubevirt` with API-key auth — see [DEPLOYMENT.md](DEPLOYMENT.md).
+
+## Requirements
+
+**Local:** `ssh`, `rsync`, optional `sshpass` for password auth.
+
+**Remote:** Linux x86_64 or arm64. Non-root users need passwordless `sudo` for install into `/usr/local/bin` and systemd.
+
+## Production (Helm) after SSH staging
+
+```bash
+# On a cluster with KubeVirt + CDI
+kubectl -n kryton create secret generic kryton-auth --from-file=keys.json
+helm upgrade --install kryton ./deploy/helm/kryton -n kryton --create-namespace
+```
+
+## Logs
+
+Set `KRYTON_DEPLOY_LOG` to capture a timestamped log under `~/.kryton/`.

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Kryton — Windows virtualization, beautifully simple</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="ambient ambient-a"></div>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">K</div><div class="brand-copy"><strong>Kryton</strong><span>Windows virtualization</span></div><button class="sidebar-toggle" id="sidebarToggle" type="button" aria-controls="primary-nav" aria-expanded="true" aria-label="Collapse sidebar">‹</button></div>
+    <nav class="nav" id="primary-nav" aria-label="Primary">
+      <button data-view="overview" class="active"><span class="nav-icon">⌂</span><span>Overview</span></button>
+      <button data-view="machines"><span class="nav-icon">▣</span><span>Machines</span></button>
+      <button data-view="images"><span class="nav-icon">◇</span><span>Images</span></button>
+      <button data-view="activity"><span class="nav-icon">⌁</span><span>Activity</span></button>
+      <button data-view="settings"><span class="nav-icon">⚙</span><span>Settings</span></button>
+    </nav>
+    <div class="side-status"><span class="live-dot"></span><div><strong>Control plane</strong><span id="providerSide">Connecting…</span></div></div>
+  </aside>
+
+  <main class="workspace">
+    <div class="topbar">
+      <div class="mobile-brand"><div class="brand-mark small">K</div><strong>Kryton</strong></div>
+      <div class="top-actions">
+        <label class="project-picker"><span>Project</span><select id="projectSelect" aria-label="Project"></select></label>
+        <button class="icon-button" id="themeButton" aria-label="Toggle appearance">◐</button>
+        <button class="avatar" id="profileButton" aria-label="Profile">K</button>
+      </div>
+    </div>
+
+    <section id="view-overview" class="view active">
+      <header class="page-header"><div><p class="eyebrow">WINDOWS VIRTUALIZATION</p><h1>Beautifully<br><span>simple.</span></h1><p class="lead">One clean API for Windows workloads. Provider details stay underneath; operations stay simple.</p></div><button class="primary large" data-create>＋ Create machine</button></header>
+      <section class="hero-card">
+        <div class="hero-copy"><span class="hero-kicker">ESTATE HEALTH</span><h2 id="heroTitle">Connecting to Kryton…</h2><p id="heroSubtitle">Loading the current project.</p><div class="hero-actions"><button class="light-button" data-create>Create Windows machine</button><button class="dark-ghost" data-view-jump="machines">View estate</button></div></div>
+        <div class="health-orb"><div class="orb-ring"><strong id="healthPercent">—</strong><span>healthy</span></div><div class="orb-glow"></div></div>
+      </section>
+      <section class="metric-grid">
+        <article class="metric-card"><span>Total machines</span><strong id="metricTotal">—</strong><small>Current project</small></article>
+        <article class="metric-card"><span>Running</span><strong id="metricRunning">—</strong><small class="positive">● Operational</small></article>
+        <article class="metric-card"><span>vCPU allocated</span><strong id="metricCPU">—</strong><small>Across Windows estate</small></article>
+        <article class="metric-card"><span>Memory</span><strong id="metricMemory">—</strong><small>Allocated guest memory</small></article>
+      </section>
+      <section class="two-column">
+        <article class="surface"><div class="section-heading"><div><p class="eyebrow">MACHINES</p><h3>Recent workloads</h3></div><button class="text-button" data-view-jump="machines">See all</button></div><div id="overviewMachines" class="machine-list"></div></article>
+        <article class="surface automation-card"><p class="eyebrow">INTEGRATION</p><h3>Built to be consumed.</h3><p>Veyron, Zeus, Transiva, CI systems, portals, and third-party software can use the same stable Kryton contract.</p><div class="endpoint-block"><span>POST</span><code>/api/v1/machines</code></div><div class="integration-status"><span class="live-dot"></span><span>REST + CloudEvents ready</span></div></article>
+      </section>
+      <article class="surface event-surface"><div class="section-heading"><div><p class="eyebrow">ACTIVITY</p><h3>What just happened</h3></div><button class="text-button" data-view-jump="activity">Open activity</button></div><div id="overviewEvents" class="timeline compact"></div></article>
+    </section>
+
+    <section id="view-machines" class="view">
+      <header class="section-page-header"><div><p class="eyebrow">MACHINES</p><h2>Windows estate</h2><p>Provision, inspect, snapshot, and control every workload from one place.</p></div><button class="primary" data-create>＋ Create machine</button></header>
+      <div class="toolbar"><div class="search"><span>⌕</span><input id="machineSearch" placeholder="Search machines" autocomplete="off"></div><select id="stateFilter" aria-label="State filter"><option value="all">All states</option><option value="running">Running</option><option value="stopped">Stopped</option><option value="provisioning">Provisioning</option><option value="failed">Needs attention</option></select><button class="secondary" id="refreshMachines">Refresh</button></div>
+      <article class="surface table-surface"><div class="machine-table-head"><span>Machine</span><span>Image</span><span>Resources</span><span>State</span><span>IP address</span><span></span></div><div id="machineTable"></div></article>
+    </section>
+
+    <section id="view-images" class="view">
+      <header class="section-page-header"><div><p class="eyebrow">IMAGE CATALOG</p><h2>Start from a trusted baseline.</h2><p>Catalog entries map to administrator-managed image sources such as CDI DataSources.</p></div></header>
+      <div id="imageGrid" class="image-grid"></div>
+    </section>
+
+    <section id="view-activity" class="view">
+      <header class="section-page-header"><div><p class="eyebrow">CLOUDEVENTS</p><h2>Activity, without the noise.</h2><p>Lifecycle events remain provider-neutral and can also stream to external products.</p></div><button class="secondary" id="refreshEvents">Refresh</button></header>
+      <article class="surface"><div id="activityTimeline" class="timeline"></div></article>
+    </section>
+
+    <section id="view-settings" class="view">
+      <header class="section-page-header"><div><p class="eyebrow">CONTROL PLANE</p><h2>Settings</h2><p>Connection identity and provider capabilities for this Kryton instance.</p></div></header>
+      <div class="settings-grid"><article class="surface settings-card"><span class="settings-icon">◎</span><h3>Identity</h3><dl id="identityDetails"></dl></article><article class="surface settings-card"><span class="settings-icon">⌘</span><h3>Provider</h3><dl id="providerDetails"></dl></article><article class="surface settings-card"><span class="settings-icon">↗</span><h3>API access</h3><p>Use a project-scoped bearer token for service-to-service access.</p><button class="secondary" id="tokenButton">Set session token</button><small>Stored only for this browser session.</small></article></div>
+    </section>
+
+    <footer>Kryton · Apache License 2.0 · Windows virtualization, beautifully simple</footer>
+  </main>
+</div>
+
+<div id="modalBackdrop" class="modal-backdrop" aria-hidden="true">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="createTitle">
+    <button class="close-button" data-close-modal aria-label="Close">×</button><p class="eyebrow">NEW WORKLOAD</p><h2 id="createTitle">Create a Windows machine</h2><p class="modal-lead">Kryton creates the machine through the selected provider while keeping your API contract unchanged.</p>
+    <form id="createForm">
+      <div class="form-grid"><label class="wide">Machine name<input name="name" value="finance-win01" required pattern="[a-z0-9]([-a-z0-9]*[a-z0-9])?"></label><label>Project<select name="project" id="createProject"></select></label><label>Image<select name="image" id="createImage"></select></label><label>vCPU<input name="cpu" type="number" min="1" max="256" value="4" required></label><label>Memory (MiB)<input name="memory" type="number" min="512" value="8192" required></label><label>Boot disk (GiB)<input name="disk" type="number" min="16" value="80" required></label><label>TTL (minutes)<input name="ttl" type="number" min="0" value="0"></label><label class="wide">Network attachment <span class="optional">optional</span><input name="network" placeholder="namespace/network-attachment-definition"></label></div>
+      <div class="modal-footer"><button type="button" class="secondary" data-close-modal>Cancel</button><button class="primary" type="submit" id="createSubmit">Create machine</button></div>
+    </form>
+  </div>
+</div>
+
+<div id="detailBackdrop" class="detail-backdrop" aria-hidden="true"><aside id="detailPanel" class="detail-panel"><button class="close-button" id="closeDetail" aria-label="Close">×</button><div id="detailContent"></div></aside></div>
+<div id="authBackdrop" class="auth-backdrop" aria-hidden="true"><div class="auth-card"><div class="brand-mark auth-mark">K</div><p class="eyebrow">KRYTON ACCESS</p><h2>Connect to the control plane.</h2><p>Enter a bearer token. It is kept only in session storage for this browser tab.</p><form id="authForm"><input id="authToken" type="password" placeholder="Bearer token" autocomplete="off" required><button class="primary full" type="submit">Connect</button></form></div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/app.js" defer></script>
+</body>
+</html>

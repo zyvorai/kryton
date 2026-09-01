@@ -1,0 +1,132 @@
+openapi: 3.1.0
+info:
+  title: Kryton API
+  version: 1.0.0
+  description: Kryton — Windows virtualization, beautifully simple.
+servers:
+  - url: /
+paths:
+  /api/v1/projects:
+    get:
+      responses:
+        '200': {description: Accessible projects}
+  /api/v1/capabilities:
+    get:
+      responses:
+        '200': {description: Provider capabilities}
+  /api/v1/images:
+    get:
+      responses:
+        '200': {description: Image catalog}
+  /api/v1/summary:
+    get:
+      parameters:
+        - in: query
+          name: project
+          schema: {type: string}
+      responses:
+        '200': {description: Project summary}
+  /api/v1/machines:
+    get:
+      parameters:
+        - in: query
+          name: project
+          schema: {type: string}
+      responses:
+        '200': {description: Machines}
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMachine'
+      responses:
+        '201': {description: Machine created}
+        '400': {description: Invalid request}
+        '409': {description: Name conflict}
+  /api/v1/machines/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: string, format: uuid}
+      - in: query
+        name: project
+        schema: {type: string}
+    get:
+      responses:
+        '200': {description: Machine}
+        '404': {description: Not found}
+    delete:
+      responses:
+        '204': {description: Deleted}
+  /api/v1/machines/{id}/start:
+    post:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+        - in: query
+          name: project
+          schema: {type: string}
+      responses:
+        '200': {description: Start requested}
+  /api/v1/machines/{id}/stop:
+    post:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+        - in: query
+          name: project
+          schema: {type: string}
+      responses:
+        '200': {description: Stop requested}
+  /api/v1/machines/{id}/snapshot:
+    post:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+        - in: query
+          name: project
+          schema: {type: string}
+      responses:
+        '201': {description: Snapshot requested}
+  /api/v1/events:
+    get:
+      responses:
+        '200': {description: CloudEvent history visible to caller}
+  /api/v1/events/stream:
+    get:
+      responses:
+        '200': {description: Server-sent CloudEvent stream}
+components:
+  schemas:
+    CreateMachine:
+      type: object
+      required: [project, name, image, compute, disk]
+      properties:
+        project: {type: string}
+        name: {type: string}
+        image: {type: string}
+        compute:
+          type: object
+          required: [cpu, memoryMiB]
+          properties:
+            cpu: {type: integer, minimum: 1, maximum: 256}
+            memoryMiB: {type: integer, minimum: 512}
+        disk:
+          type: object
+          required: [sizeGiB]
+          properties:
+            sizeGiB: {type: integer, minimum: 16}
+        network:
+          type: object
+          properties:
+            networkId: {type: string}
+        ttlMinutes: {type: integer, minimum: 0, maximum: 43200}

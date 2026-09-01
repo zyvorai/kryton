@@ -1,0 +1,9 @@
+# Contributing
+
+1. Keep provider-specific behavior behind `internal/provider.Provider`.
+2. Do not expose raw provider identifiers as the primary public machine ID.
+3. Add tests for lifecycle and error paths.
+4. Run `make check` before opening a pull request.
+5. Keep the project free of Microsoft installation media, keys, activation bypasses, or other license-restricted assets.
+
+Contributions are accepted under the Apache License 2.0.

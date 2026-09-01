@@ -1,0 +1,9 @@
+{
+  "project": "default",
+  "name": "finance-win01",
+  "image": "windows-server-2025",
+  "compute": {"cpu": 4, "memoryMiB": 8192},
+  "disk": {"sizeGiB": 80},
+  "network": {"networkId": ""},
+  "ttlMinutes": 0
+}

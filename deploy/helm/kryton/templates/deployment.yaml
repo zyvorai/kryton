@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kryton.fullname" . }}
+  labels:
+    {{- include "kryton.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "kryton.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "kryton.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ include "kryton.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: kryton
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: KRYTON_ADDR
+              value: ":8080"
+            - name: KRYTON_PROVIDER
+              value: {{ .Values.provider | quote }}
+            - name: KRYTON_PROJECTS
+              value: {{ join "," .Values.projects | quote }}
+            - name: KRYTON_DEFAULT_PROJECT
+              value: {{ .Values.defaultProject | quote }}
+            - name: KRYTON_NAMESPACE_PREFIX
+              value: {{ .Values.namespacePrefix | quote }}
+            - name: KRYTON_IMAGE_NAMESPACE
+              value: {{ .Values.imageNamespace | quote }}
+            - name: KRYTON_IMAGES_FILE
+              value: /etc/kryton/catalog/images.json
+            - name: KRYTON_AUTH_MODE
+              value: {{ .Values.auth.mode | quote }}
+            - name: KRYTON_TRUST_PROXY
+              value: {{ .Values.auth.trustProxy | quote }}
+            - name: KRYTON_ALLOW_INSECURE
+              value: {{ .Values.auth.allowInsecure | quote }}
+            - name: KRYTON_RECONCILE_INTERVAL
+              value: {{ .Values.reconcileInterval | quote }}
+            {{- if .Values.eventWebhookURL }}
+            - name: KRYTON_EVENT_WEBHOOK_URL
+              value: {{ .Values.eventWebhookURL | quote }}
+            {{- end }}
+            {{- if eq .Values.auth.mode "apikey" }}
+            - name: KRYTON_API_KEYS_FILE
+              value: /etc/kryton/auth/keys.json
+            {{- end }}
+            {{- if eq .Values.auth.mode "proxy" }}
+            - name: KRYTON_PROXY_SECRET_FILE
+              value: /etc/kryton/auth/proxy-secret
+            {{- end }}
+          volumeMounts:
+            - name: catalog
+              mountPath: /etc/kryton/catalog
+              readOnly: true
+            {{- if ne .Values.auth.mode "disabled" }}
+            - name: auth
+              mountPath: /etc/kryton/auth
+              readOnly: true
+            {{- end }}
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 3
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: catalog
+          configMap:
+            name: {{ include "kryton.fullname" . }}-images
+        {{- if ne .Values.auth.mode "disabled" }}
+        - name: auth
+          secret:
+            secretName: {{ required "auth.existingSecret is required when authentication is enabled" .Values.auth.existingSecret }}
+        {{- end }}
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
