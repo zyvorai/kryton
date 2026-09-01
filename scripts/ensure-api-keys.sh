@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 Kryton contributors
+# SPDX-License-Identifier: Apache-2.0
 # Create ~/.kryton/keys.json (SHA-256 digests) and lab.token (raw bearer) if missing.
 set -euo pipefail
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 Kryton contributors
+# SPDX-License-Identifier: Apache-2.0
 # Run KubeVirt production setup on a remote lab host (rsync + SSH + nohup for long golden builds).
 set -euo pipefail
 
@@ -12,7 +14,7 @@ LOG="${KRYTON_PRODUCTION_LOG:-${HOME}/.kryton/kubevirt-production.log}"
 BUILD_GOLDEN="${BUILD_GOLDEN:-1}"
 SKIP_CREATE="${SKIP_CREATE:-0}"
 
-SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=60 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
+SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=60 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o GSSAPIAuthentication=no -o TCPKeepAlive=yes)
 
 usage() {
   cat <<EOF
@@ -44,7 +46,7 @@ if [ "${SKIP_CREATE}" = "1" ]; then
   ARGS+=(--skip-create)
 fi
 
-REMOTE_CMD="cd '${REMOTE_DIR}' && chmod +x scripts/*.sh && nohup ./scripts/setup-kubevirt-production.sh ${ARGS[*]} > '${REMOTE_DIR}/kubevirt-production.log' 2>&1 & echo \$!"
+REMOTE_CMD="cd '${REMOTE_DIR}' && chmod +x scripts/*.sh && ./scripts/lab-recover.sh && if [ -f out/windows-11e-golden.qcow2 ]; then nohup ./scripts/setup-kubevirt-production.sh --id windows-11-enterprise --image out/windows-11e-golden.qcow2 > '${REMOTE_DIR}/kubevirt-production.log' 2>&1 & else nohup ./scripts/setup-kubevirt-production.sh --build-golden --id windows-11-enterprise > '${REMOTE_DIR}/kubevirt-production.log' 2>&1 & fi && echo \$!"
 
 echo "→ Starting production setup on ${REMOTE} (log: ${REMOTE_DIR}/kubevirt-production.log)"
 for attempt in 1 2 3 4 5 6; do

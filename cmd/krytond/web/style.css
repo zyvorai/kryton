@@ -1,3 +1,7 @@
+/* Copyright 2026 Kryton contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 :root{--bg:#f0f2f5;--bg2:#f7f8fa;--surface:#ffffff;--surface-solid:#ffffff;--surface-hover:#eef1f4;--text:#1a2332;--soft:#5a6578;--faint:#8490a3;--line:rgba(26,35,50,.12);--line-strong:rgba(26,35,50,.18);--accent:#cc420a;--accent2:#e04f12;--accent-glow:rgba(204,66,10,.2);--good:#1f8f5f;--warn:#c8881a;--bad:#c43c3c;--shadow:0 12px 36px rgba(26,35,50,.08);--small-shadow:0 4px 14px rgba(26,35,50,.06);--radius:12px;--radius-sm:8px;--blur:none;--rail:220px;--rail-collapsed:64px;--font-display:"Outfit","Source Sans 3",sans-serif;--font-text:"Source Sans 3","Outfit",sans-serif;color-scheme:light}
 [data-theme="dark"]{--bg:#12161e;--bg2:#181d27;--surface:#1e2532;--surface-solid:#232b3a;--surface-hover:#2c3548;--text:#e8ecf2;--soft:#a8b2c3;--faint:#7d8a9e;--line:rgba(232,236,242,.1);--line-strong:rgba(232,236,242,.16);--accent:#f97316;--accent2:#ff7a2e;--accent-glow:rgba(249,115,22,.22);--good:#3db87a;--warn:#e0a03a;--bad:#e05a5a;--shadow:0 12px 36px rgba(0,0,0,.35);--small-shadow:0 4px 14px rgba(0,0,0,.25);color-scheme:dark}
 

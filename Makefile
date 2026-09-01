@@ -1,3 +1,5 @@
+# Copyright 2026 Kryton contributors
+# SPDX-License-Identifier: Apache-2.0
 .PHONY: run build test race vet fmt check demo image deploy-remote harden-lab bootstrap-kubevirt setup-kubevirt setup-kubevirt-production run-kubevirt-production-remote build-golden enable-kubevirt-snapshots enable-rook-ceph
 
 run:

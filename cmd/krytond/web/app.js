@@ -1,3 +1,6 @@
+// Copyright 2026 Kryton contributors
+// SPDX-License-Identifier: Apache-2.0
+
 'use strict';
 const state={project:'',projects:[],machines:[],images:[],events:[],summary:null,caps:null,me:null,selected:null,golden:[],activeGolden:null,jobs:[],selectedJob:null,storage:null,settings:null,connectionTest:null,atlasTest:null,selectedStorageClass:'',storageRookMode:'lab',storageWipeDevice:false,storageSetupLogs:[],storageSetupPoll:null};
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];

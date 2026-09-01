@@ -1,3 +1,17 @@
+// Copyright 2026 Kryton contributors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -107,9 +121,9 @@ func createCommand(c client, args []string) {
 	}
 	body := map[string]any{
 		"project": *project, "name": f.Arg(0), "image": *image,
-		"compute": map[string]any{"cpu": *cpu, "memoryMiB": *memory},
-		"disk":    map[string]any{"sizeGiB": *disk},
-		"network": map[string]any{"networkId": *network},
+		"compute":    map[string]any{"cpu": *cpu, "memoryMiB": *memory},
+		"disk":       map[string]any{"sizeGiB": *disk},
+		"network":    map[string]any{"networkId": *network},
 		"ttlMinutes": *ttl,
 	}
 	if dockur := buildDockurOptions(*dUsername, *dPassword, *dHostname, *dLanguage, *dRegion, *dKeyboard, *dProductKey, *dDomain, *dDomainOU, *dSharedDir, *dOemDir, *dCommand, *dCustomISO, *dEdition, *dExtraDisks, *dAudio, *dSecureBoot, *dNoAutologin); dockur != nil {

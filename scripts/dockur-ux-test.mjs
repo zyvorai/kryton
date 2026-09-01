@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// Copyright 2026 Kryton contributors
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Chrome UX test for dockur create options on the lab UI.
  * Uses system Chrome via Playwright channel (no chromium download).
@@ -8,7 +10,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const base = process.env.KRYTON_DOCKUR_URL || 'http://175.110.122.71:7088';
-const authToken = process.env.KRYTON_TOKEN || '';
+const authToken = process.env.KRYTON_TOKEN || ''; // optional override; lab auto-auth used when unset
 const shots = process.env.KRYTON_SMOKE_SHOTS || '/tmp/kryton-dockur-test';
 mkdirSync(shots, { recursive: true });
 
@@ -52,6 +54,8 @@ try {
   if (authToken) {
     await page.evaluate((t) => sessionStorage.setItem('kryton.token', t), authToken);
     await page.reload({ waitUntil: 'domcontentloaded' });
+  } else {
+    await page.waitForTimeout(1500);
   }
   await page.waitForSelector('[data-create]', { state: 'attached', timeout: 30000 });
   await page.waitForTimeout(2000);

@@ -1,3 +1,5 @@
+# Copyright 2026 Kryton contributors
+# SPDX-License-Identifier: Apache-2.0
 FROM golang:1.23 AS build
 WORKDIR /src
 COPY . .

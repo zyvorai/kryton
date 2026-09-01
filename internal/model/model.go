@@ -1,3 +1,17 @@
+// Copyright 2026 Kryton contributors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package model
 
 import (
@@ -31,8 +45,8 @@ type ComputeSpec struct {
 }
 
 type DiskSpec struct {
-	SizeGiB       int    `json:"sizeGiB"`
-	StorageClass  string `json:"storageClass,omitempty"`
+	SizeGiB      int    `json:"sizeGiB"`
+	StorageClass string `json:"storageClass,omitempty"`
 }
 
 type NetworkSpec struct {
@@ -117,21 +131,21 @@ type Snapshot struct {
 }
 
 type Image struct {
-	ID            string   `json:"id"`
-	Name          string   `json:"name"`
-	Version       string   `json:"version"`
-	Family        string   `json:"family"`
-	Description   string   `json:"description"`
-	MinCPU        int      `json:"minCpu"`
-	MinMemoryMiB  int      `json:"minMemoryMiB"`
-	DefaultDiskGB int      `json:"defaultDiskGiB"`
-	DockurVersion      string   `json:"dockurVersion,omitempty"`
-	Tags               []string `json:"tags,omitempty"`
-	Availability       string   `json:"availability,omitempty"` // stored | on-demand | catalog
-	StorageSource      string   `json:"storageSource,omitempty"` // cdi | dockur | golden | demo
-	StorageNamespace   string   `json:"storageNamespace,omitempty"`
-	StoragePath        string   `json:"storagePath,omitempty"`
-	Ready              bool     `json:"ready"`
+	ID               string   `json:"id"`
+	Name             string   `json:"name"`
+	Version          string   `json:"version"`
+	Family           string   `json:"family"`
+	Description      string   `json:"description"`
+	MinCPU           int      `json:"minCpu"`
+	MinMemoryMiB     int      `json:"minMemoryMiB"`
+	DefaultDiskGB    int      `json:"defaultDiskGiB"`
+	DockurVersion    string   `json:"dockurVersion,omitempty"`
+	Tags             []string `json:"tags,omitempty"`
+	Availability     string   `json:"availability,omitempty"`  // stored | on-demand | catalog
+	StorageSource    string   `json:"storageSource,omitempty"` // cdi | dockur | golden | demo
+	StorageNamespace string   `json:"storageNamespace,omitempty"`
+	StoragePath      string   `json:"storagePath,omitempty"`
+	Ready            bool     `json:"ready"`
 }
 
 type Capabilities struct {

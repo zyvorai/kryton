@@ -1,3 +1,17 @@
+// Copyright 2026 Kryton contributors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package api
 
 import (
@@ -27,31 +41,31 @@ import (
 )
 
 type Config struct {
-	Provider        provider.Provider
-	Catalog         *catalog.Catalog
-	Events          *events.Bus
-	Auth            *auth.Authenticator
-	Metrics         *metrics.Metrics
-	Web             fs.FS
-	Projects        []string
-	DefaultProject  string
-	AuthMode        string
-	DockurDataDir   string
-	DockurRuntime   string
-	ImageNamespace  string
-	NamespacePrefix string
-	StorageClass    string
-	StorageStore    *storage.Store
-	StorageSetup    *storage.SetupManager
-	SettingsStore   *settings.Store
-	KubeClient      *kubeapi.Client
-	Golden          *golden.Manager
-	Jobs            *jobs.Service
-	Inventory       *images.Inventory
-	Log             *slog.Logger
-	AllowInsecure   bool
-	LabAutoAuth     bool
-	LabTokenFile    string
+	Provider           provider.Provider
+	Catalog            *catalog.Catalog
+	Events             *events.Bus
+	Auth               *auth.Authenticator
+	Metrics            *metrics.Metrics
+	Web                fs.FS
+	Projects           []string
+	DefaultProject     string
+	AuthMode           string
+	DockurDataDir      string
+	DockurRuntime      string
+	ImageNamespace     string
+	NamespacePrefix    string
+	StorageClass       string
+	StorageStore       *storage.Store
+	StorageSetup       *storage.SetupManager
+	SettingsStore      *settings.Store
+	KubeClient         *kubeapi.Client
+	Golden             *golden.Manager
+	Jobs               *jobs.Service
+	Inventory          *images.Inventory
+	Log                *slog.Logger
+	AllowInsecure      bool
+	LabAutoAuth        bool
+	LabTokenFile       string
 	DefaultProjectEnv  string
 	ImageNamespaceEnv  string
 	StorageConfigPath  string
@@ -60,31 +74,31 @@ type Config struct {
 }
 
 type Server struct {
-	p               provider.Provider
-	catalog         *catalog.Catalog
-	events          *events.Bus
-	auth            *auth.Authenticator
-	metrics         *metrics.Metrics
-	web             fs.FS
-	projects        []string
-	defaultProject  string
-	authMode        string
-	dockurDataDir   string
-	dockurRuntime   string
-	imageNamespace  string
-	namespacePrefix string
-	storageClass    string
-	storageStore    *storage.Store
-	storageSetup    *storage.SetupManager
-	settingsStore   *settings.Store
-	kubeClient      *kubeapi.Client
-	golden          *golden.Manager
-	jobs            *jobs.Service
-	inventory       *images.Inventory
-	log             *slog.Logger
-	allowInsecure   bool
-	labAutoAuth     bool
-	labTokenFile    string
+	p                  provider.Provider
+	catalog            *catalog.Catalog
+	events             *events.Bus
+	auth               *auth.Authenticator
+	metrics            *metrics.Metrics
+	web                fs.FS
+	projects           []string
+	defaultProject     string
+	authMode           string
+	dockurDataDir      string
+	dockurRuntime      string
+	imageNamespace     string
+	namespacePrefix    string
+	storageClass       string
+	storageStore       *storage.Store
+	storageSetup       *storage.SetupManager
+	settingsStore      *settings.Store
+	kubeClient         *kubeapi.Client
+	golden             *golden.Manager
+	jobs               *jobs.Service
+	inventory          *images.Inventory
+	log                *slog.Logger
+	allowInsecure      bool
+	labAutoAuth        bool
+	labTokenFile       string
 	defaultProjectEnv  string
 	imageNamespaceEnv  string
 	storageConfigPath  string

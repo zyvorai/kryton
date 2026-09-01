@@ -1,3 +1,6 @@
+// Copyright 2026 Kryton contributors
+// SPDX-License-Identifier: Apache-2.0
+
 const cfg = JSON.parse(document.getElementById('console-config').textContent);
 const { machine, project, bootError } = cfg;
 const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
