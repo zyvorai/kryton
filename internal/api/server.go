@@ -13,6 +13,7 @@ import (
 
 	"github.com/zyvorai/kryton/internal/auth"
 	"github.com/zyvorai/kryton/internal/catalog"
+	"github.com/zyvorai/kryton/internal/doctor"
 	"github.com/zyvorai/kryton/internal/events"
 	"github.com/zyvorai/kryton/internal/metrics"
 	"github.com/zyvorai/kryton/internal/model"
@@ -28,6 +29,9 @@ type Config struct {
 	Web            fs.FS
 	Projects       []string
 	DefaultProject string
+	AuthMode       string
+	DockurDataDir  string
+	DockurRuntime  string
 	Log            *slog.Logger
 }
 
@@ -40,6 +44,9 @@ type Server struct {
 	web            fs.FS
 	projects       []string
 	defaultProject string
+	authMode       string
+	dockurDataDir  string
+	dockurRuntime  string
 	log            *slog.Logger
 }
 
@@ -63,7 +70,11 @@ type APIError struct {
 }
 
 func New(cfg Config) *Server {
-	return &Server{p: cfg.Provider, catalog: cfg.Catalog, events: cfg.Events, auth: cfg.Auth, metrics: cfg.Metrics, web: cfg.Web, projects: cfg.Projects, defaultProject: cfg.DefaultProject, log: cfg.Log}
+	return &Server{
+		p: cfg.Provider, catalog: cfg.Catalog, events: cfg.Events, auth: cfg.Auth, metrics: cfg.Metrics, web: cfg.Web,
+		projects: cfg.Projects, defaultProject: cfg.DefaultProject, authMode: cfg.AuthMode,
+		dockurDataDir: cfg.DockurDataDir, dockurRuntime: cfg.DockurRuntime, log: cfg.Log,
+	}
 }
 
 func (s *Server) Handler() http.Handler {
@@ -71,6 +82,7 @@ func (s *Server) Handler() http.Handler {
 	apiMux.HandleFunc("GET /api/v1/me", s.me)
 	apiMux.HandleFunc("GET /api/v1/projects", s.listProjects)
 	apiMux.HandleFunc("GET /api/v1/capabilities", s.capabilities)
+	apiMux.HandleFunc("GET /api/v1/doctor", s.doctor)
 	apiMux.HandleFunc("GET /api/v1/images", s.images)
 	apiMux.HandleFunc("GET /api/v1/summary", s.summary)
 	apiMux.HandleFunc("GET /api/v1/machines", s.listMachines)
@@ -107,6 +119,21 @@ func (s *Server) capabilities(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jsonResponse(w, http.StatusOK, c)
+}
+func (s *Server) doctor(w http.ResponseWriter, r *http.Request) {
+	report := doctor.Run(r.Context(), doctor.Input{
+		Provider:  s.p,
+		Catalog:   s.catalog,
+		AuthMode:  s.authMode,
+		Projects:  s.projects,
+		DockurDir: s.dockurDataDir,
+		Runtime:   s.dockurRuntime,
+	})
+	status := http.StatusOK
+	if !report.Healthy {
+		status = http.StatusServiceUnavailable
+	}
+	jsonResponse(w, status, report)
 }
 func (s *Server) images(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, http.StatusOK, listResponse[model.Image]{Items: s.catalog.List()})
@@ -203,7 +230,10 @@ func (s *Server) createMachine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.metrics.Operation("create")
-	s.events.Publish(r.Context(), "io.kryton.machine.created", "machines/"+m.ID, map[string]any{"project": m.Project, "machineId": m.ID, "name": m.Spec.Name, "state": m.State})
+	s.events.Publish(r.Context(), "io.kryton.machine.created", "machines/"+m.ID, map[string]any{"project": m.Project, "machineId": m.ID, "name": m.Spec.Name, "state": m.State, "consoleUrl": m.ConsoleURL})
+	if m.State == model.StateProvisioning {
+		s.events.Publish(r.Context(), "io.kryton.machine.install.started", "machines/"+m.ID, map[string]any{"project": m.Project, "machineId": m.ID, "name": m.Spec.Name, "consoleUrl": m.ConsoleURL, "message": m.Message})
+	}
 	jsonResponse(w, http.StatusCreated, m)
 }
 

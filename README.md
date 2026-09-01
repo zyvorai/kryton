@@ -4,19 +4,19 @@
 
 ### Windows virtualization, beautifully simple.
 
-One stable machine API. Kubernetes and KubeVirt stay behind the provider boundary.
+One stable machine API. Kubernetes, KubeVirt, and dockur stay behind the provider boundary.
 
 [![CI](https://github.com/zyvorai/kryton/actions/workflows/ci.yml/badge.svg)](https://github.com/zyvorai/kryton/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/github/license/zyvorai/kryton)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
 
-[Quick start](#quick-start) · [Install](#install) · [Remote deploy](#remote-deploy) · [Helm](#helm-kubevirt) · [API](#api) · [Docs](docs/)
+[Quick start](#quick-start) · [Install](#install) · [Remote deploy](#remote-deploy) · [Dockur lab](#dockur-lab-provider) · [Helm](#helm-kubevirt) · [API](#api) · [Docs](docs/)
 
 </div>
 
 ---
 
-**Kryton** is a provider-neutral Windows workload control plane. Portals, CI, and automation talk to one REST + CloudEvents contract. The KubeVirt provider turns that into VirtualMachines, DataVolumes, and snapshots — without callers ever touching `kubectl` or `virtctl`.
+**Kryton** is a provider-neutral Windows workload control plane. Portals, CI, and automation talk to one REST + CloudEvents contract — whether the backend is an in-memory demo, real Windows via [dockur/windows](https://github.com/dockur/windows), or production KubeVirt on Kubernetes.
 
 ```text
   Veyron / Zeus / Transiva / CI / portals
@@ -26,8 +26,10 @@ One stable machine API. Kubernetes and KubeVirt stay behind the provider boundar
                  Kryton
                     │
            Provider interface
-              /          \
-           demo        KubeVirt ──► Kubernetes API
+         /        |          \
+      demo     dockur      KubeVirt
+                 │              │
+          dockur/windows    Kubernetes API
 ```
 
 | | |
@@ -35,8 +37,17 @@ One stable machine API. Kubernetes and KubeVirt stay behind the provider boundar
 | **Stable UUIDs** | Independent of namespace / provider name |
 | **Auth** | API keys · trusted reverse proxy · secure-by-default |
 | **Day-2** | Start / stop / snapshot / TTL expiry · SSE + webhooks |
-| **UI** | Apple-inspired dark/light dashboard |
+| **Diagnostics** | `krytonctl doctor` + `/api/v1/doctor` |
+| **UI** | Apple-inspired dark/light dashboard with collapsible rail |
 | **License** | Apache-2.0 — no Windows media or keys shipped |
+
+### Providers
+
+| Provider | Use case | Real Windows? |
+|----------|----------|---------------|
+| `demo` | Local eval, CI smoke tests | No (in-memory) |
+| `dockur` | Lab hosts with Docker/Podman + KVM | Yes ([dockur/windows](https://github.com/dockur/windows)) |
+| `kubevirt` | Production Kubernetes estates | Yes (operator-managed golden images) |
 
 ---
 
@@ -56,6 +67,7 @@ Open [http://localhost:8080](http://localhost:8080).
 # CLI against the local demo
 go run ./cmd/krytonctl list
 go run ./cmd/krytonctl create win-dev-01
+go run ./cmd/krytonctl doctor
 ```
 
 Local defaults: `demo` provider + authentication **disabled** — evaluation only.
@@ -117,6 +129,25 @@ Full guide: **[docs/DEPLOY-REMOTE.md](docs/DEPLOY-REMOTE.md)**.
 
 ---
 
+## Dockur lab provider
+
+Run real Windows guests on a Linux host with Docker/Podman and KVM — inspired by [dockur/windows](https://github.com/dockur/windows) and [WinPodX](https://github.com/kernalix7/winpodx).
+
+```bash
+export KRYTON_PROVIDER=dockur
+export KRYTON_DOCKUR_RUNTIME=docker
+export KRYTON_DOCKUR_PUBLIC_HOST=<your-host-ip>
+krytond
+
+krytonctl doctor
+krytonctl create --image windows-11-enterprise --cpu 4 --memory 8192 lab-win01
+krytonctl get <id>   # open consoleUrl to watch install
+```
+
+See **[docs/DOCKUR.md](docs/DOCKUR.md)** for image mapping, ports, and requirements.
+
+---
+
 ## Helm (KubeVirt)
 
 Production path: Kubernetes with KubeVirt + CDI, administrator-managed Windows `DataSource` objects, and API-key auth.
@@ -160,6 +191,8 @@ For browser SSO, terminate identity at a reverse proxy and set `X-Kryton-User` /
 
 ```text
 GET    /api/v1/projects
+GET    /api/v1/capabilities
+GET    /api/v1/doctor
 GET    /api/v1/images
 GET    /api/v1/summary?project=finance
 GET    /api/v1/machines?project=finance
@@ -171,7 +204,25 @@ GET    /api/v1/events
 GET    /api/v1/events/stream
 ```
 
+Machine responses include `consoleUrl`, `progressPercent`, and `message` when the provider supports install progress (dockur, demo).
+
 OpenAPI: [`openapi.yaml`](openapi.yaml).
+
+---
+
+## Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `KRYTON_PROVIDER` | `demo` | `demo` · `dockur` · `kubevirt` |
+| `KRYTON_AUTH_MODE` | `disabled` | `disabled` · `apikey` · `proxy` |
+| `KRYTON_PROJECTS` | `default` | Comma-separated project list |
+| `KRYTON_ADDR` | `:8080` | Listen address |
+| `KRYTON_DOCKUR_RUNTIME` | `docker` | `docker` or `podman` |
+| `KRYTON_DOCKUR_DATA_DIR` | *(temp)* | Compose state directory |
+| `KRYTON_DOCKUR_PUBLIC_HOST` | `127.0.0.1` | Hostname/IP for console URLs |
+
+Run `krytonctl doctor` after changing provider settings to validate the environment.
 
 ---
 
@@ -179,7 +230,7 @@ OpenAPI: [`openapi.yaml`](openapi.yaml).
 
 - Not a Windows installer, activation service, or media distributor.
 - Not a raw KubeVirt YAML factory for callers — that stays inside the provider.
-- Microsoft media, activation, and entitlement remain the **operator’s** responsibility.
+- Microsoft media, activation, and entitlement remain the **operator's** responsibility.
 
 ---
 
@@ -188,6 +239,7 @@ OpenAPI: [`openapi.yaml`](openapi.yaml).
 | Doc | Topic |
 |-----|--------|
 | [DEPLOY-REMOTE.md](docs/DEPLOY-REMOTE.md) | SSH / rsync lab deploy |
+| [DOCKUR.md](docs/DOCKUR.md) | Real Windows via dockur/windows provider |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production KubeVirt |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Provider boundary & IDs |
 | [API.md](docs/API.md) | HTTP contract |

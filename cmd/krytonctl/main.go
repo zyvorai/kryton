@@ -52,6 +52,8 @@ func main() {
 		c.do("GET", "/api/v1/events?limit=50", nil)
 	case "capabilities":
 		c.do("GET", "/api/v1/capabilities", nil)
+	case "doctor":
+		c.do("GET", "/api/v1/doctor", nil)
 	case "get", "start", "stop", "delete", "snapshot":
 		machineCommand(c, os.Args[1], os.Args[2:])
 	case "create":
@@ -150,6 +152,7 @@ func usage() {
   images
   events
   capabilities
+  doctor
   generate-token
   hash-token TOKEN
 

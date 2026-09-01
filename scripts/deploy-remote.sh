@@ -344,7 +344,6 @@ CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o bin/krytond ./cmd/krytond
 CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o bin/krytonctl ./cmd/krytonctl
 $SUDO install -m755 bin/krytond /usr/local/bin/krytond
 $SUDO install -m755 bin/krytonctl /usr/local/bin/krytonctl
-krytond -h >/dev/null 2>&1 || true
 echo "Installed: $(command -v krytond) $(command -v krytonctl)"
 
 if [ "${NO_SERVICE}" = "true" ]; then

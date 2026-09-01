@@ -62,8 +62,17 @@ func (c *Catalog) Get(id string) (model.Image, bool) {
 
 func defaults() []model.Image {
 	return []model.Image{
-		{ID: "windows-server-2025", Name: "Windows Server 2025", Version: "2025", Family: "windows-server", Description: "Enterprise Windows Server image reference for CDI DataSource provisioning.", MinCPU: 2, MinMemoryMiB: 4096, DefaultDiskGB: 80, Tags: []string{"server", "enterprise"}},
-		{ID: "windows-server-2022", Name: "Windows Server 2022", Version: "2022", Family: "windows-server", Description: "Stable Windows Server image for application and infrastructure workloads.", MinCPU: 2, MinMemoryMiB: 4096, DefaultDiskGB: 80, Tags: []string{"server", "lts"}},
-		{ID: "windows-11-enterprise", Name: "Windows 11 Enterprise", Version: "24H2", Family: "windows-desktop", Description: "Enterprise Windows desktop image for developer and test workspaces.", MinCPU: 4, MinMemoryMiB: 8192, DefaultDiskGB: 96, Tags: []string{"desktop", "developer"}},
+		{ID: "windows-server-2025", Name: "Windows Server 2025", Version: "2025", Family: "windows-server", Description: "Enterprise Windows Server image reference for CDI DataSource / dockur provisioning.", MinCPU: 2, MinMemoryMiB: 4096, DefaultDiskGB: 80, DockurVersion: "2025", Tags: []string{"server", "enterprise", "dockur"}},
+		{ID: "windows-server-2022", Name: "Windows Server 2022", Version: "2022", Family: "windows-server", Description: "Stable Windows Server image for application and infrastructure workloads.", MinCPU: 2, MinMemoryMiB: 4096, DefaultDiskGB: 80, DockurVersion: "2022", Tags: []string{"server", "lts", "dockur"}},
+		{ID: "windows-11-enterprise", Name: "Windows 11 Enterprise", Version: "24H2", Family: "windows-desktop", Description: "Enterprise Windows desktop image for developer and test workspaces.", MinCPU: 4, MinMemoryMiB: 8192, DefaultDiskGB: 96, DockurVersion: "11e", Tags: []string{"desktop", "developer", "dockur"}},
 	}
+}
+
+// DockurVersion implements dockur.VersionResolver.
+func (c *Catalog) DockurVersion(imageID string) (string, bool) {
+	img, ok := c.items[imageID]
+	if !ok || img.DockurVersion == "" {
+		return "", false
+	}
+	return img.DockurVersion, true
 }

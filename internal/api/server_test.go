@@ -31,8 +31,24 @@ func testServer(t *testing.T) (http.Handler, *events.Bus) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	bus := events.New(100, "", log)
 	var web fs.FS = fstest.MapFS{"index.html": {Data: []byte("ok")}}
-	s := New(Config{Provider: demo.New(), Catalog: cat, Events: bus, Auth: a, Metrics: metrics.New(), Web: web, Projects: []string{"default"}, DefaultProject: "default", Log: log})
+	s := New(Config{Provider: demo.New(), Catalog: cat, Events: bus, Auth: a, Metrics: metrics.New(), Web: web, Projects: []string{"default"}, DefaultProject: "default", AuthMode: "disabled", Log: log})
 	return s.Handler(), bus
+}
+
+func TestDoctor(t *testing.T) {
+	h, _ := testServer(t)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/doctor", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("doctor status=%d body=%s", w.Code, w.Body.String())
+	}
+	var report struct {
+		Healthy  bool  `json:"healthy"`
+		Findings []any `json:"findings"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &report); err != nil || !report.Healthy || len(report.Findings) == 0 {
+		t.Fatalf("bad doctor report: %v %s", err, w.Body.String())
+	}
 }
 
 func TestCreateLifecycleAndEvents(t *testing.T) {

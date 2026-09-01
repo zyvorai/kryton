@@ -19,6 +19,7 @@ import (
 	"github.com/zyvorai/kryton/internal/catalog"
 	"github.com/zyvorai/kryton/internal/config"
 	"github.com/zyvorai/kryton/internal/demo"
+	"github.com/zyvorai/kryton/internal/dockur"
 	"github.com/zyvorai/kryton/internal/events"
 	"github.com/zyvorai/kryton/internal/kubeapi"
 	"github.com/zyvorai/kryton/internal/kubevirt"
@@ -57,6 +58,16 @@ func main() {
 			os.Exit(2)
 		}
 		p = kubevirt.New(kubevirt.Config{Client: kc, NamespacePrefix: cfg.NamespacePrefix, ImageNamespace: cfg.ImageNamespace})
+	case "dockur":
+		dp, err := dockur.New(dockur.Config{
+			Runtime: cfg.Dockur.Runtime, DataDir: cfg.Dockur.DataDir, PublicHost: cfg.Dockur.PublicHost,
+			HTTPBase: cfg.Dockur.HTTPBase, RDPBase: cfg.Dockur.RDPBase, Catalog: cat,
+		})
+		if err != nil {
+			log.Error("dockur provider failed", "error", err)
+			os.Exit(2)
+		}
+		p = dp
 	default:
 		p = demo.New()
 	}
@@ -68,7 +79,11 @@ func main() {
 	}
 	bus := events.New(500, cfg.EventWebhookURL, log)
 	m := metrics.New()
-	h := api.New(api.Config{Provider: p, Catalog: cat, Events: bus, Auth: authn, Metrics: m, Web: web, Projects: cfg.Projects, DefaultProject: cfg.DefaultProject, Log: log}).Handler()
+	h := api.New(api.Config{
+		Provider: p, Catalog: cat, Events: bus, Auth: authn, Metrics: m, Web: web,
+		Projects: cfg.Projects, DefaultProject: cfg.DefaultProject, AuthMode: cfg.AuthMode,
+		DockurDataDir: cfg.Dockur.DataDir, DockurRuntime: cfg.Dockur.Runtime, Log: log,
+	}).Handler()
 	server := &http.Server{Addr: cfg.Addr, Handler: h, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 0, IdleTimeout: 120 * time.Second, MaxHeaderBytes: 1 << 20}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)

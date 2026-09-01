@@ -29,6 +29,15 @@ type Config struct {
 	ShutdownTimeout   time.Duration
 	Kubernetes        Kubernetes
 	TLS               TLS
+	Dockur            Dockur
+}
+
+type Dockur struct {
+	Runtime    string
+	DataDir    string
+	PublicHost string
+	HTTPBase   int
+	RDPBase    int
 }
 
 type Kubernetes struct {
@@ -75,6 +84,13 @@ func Load() (Config, error) {
 			KeyFile:      os.Getenv("KRYTON_TLS_KEY_FILE"),
 			ClientCAFile: os.Getenv("KRYTON_CLIENT_CA_FILE"),
 		},
+		Dockur: Dockur{
+			Runtime:    getenv("KRYTON_DOCKUR_RUNTIME", "docker"),
+			DataDir:    os.Getenv("KRYTON_DOCKUR_DATA_DIR"),
+			PublicHost: getenv("KRYTON_DOCKUR_PUBLIC_HOST", "127.0.0.1"),
+			HTTPBase:   intEnv("KRYTON_DOCKUR_HTTP_BASE", 18006),
+			RDPBase:    intEnv("KRYTON_DOCKUR_RDP_BASE", 13389),
+		},
 	}
 	if err := cfg.Validate(); err != nil {
 		return Config{}, err
@@ -83,8 +99,10 @@ func Load() (Config, error) {
 }
 
 func (c Config) Validate() error {
-	if c.Provider != "demo" && c.Provider != "kubevirt" {
-		return fmt.Errorf("unsupported KRYTON_PROVIDER %q", c.Provider)
+	switch c.Provider {
+	case "demo", "kubevirt", "dockur":
+	default:
+		return fmt.Errorf("unsupported KRYTON_PROVIDER %q (demo|kubevirt|dockur)", c.Provider)
 	}
 	if len(c.Projects) == 0 {
 		return errors.New("at least one KRYTON_PROJECTS entry is required")
@@ -113,8 +131,8 @@ func (c Config) Validate() error {
 	}
 	switch c.AuthMode {
 	case "disabled":
-		if c.Provider != "demo" && !c.AllowInsecure {
-			return errors.New("authentication cannot be disabled with a non-demo provider unless KRYTON_ALLOW_INSECURE=true")
+		if c.Provider != "demo" && c.Provider != "dockur" && !c.AllowInsecure {
+			return errors.New("authentication cannot be disabled with a production provider unless KRYTON_ALLOW_INSECURE=true")
 		}
 	case "apikey":
 		if c.APIKeysFile == "" {
@@ -185,4 +203,16 @@ func durationEnv(k string, d time.Duration) time.Duration {
 		return d
 	}
 	return x
+}
+
+func intEnv(k string, d int) int {
+	v := strings.TrimSpace(os.Getenv(k))
+	if v == "" {
+		return d
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return d
+	}
+	return n
 }

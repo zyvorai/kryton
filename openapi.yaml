@@ -14,6 +14,11 @@ paths:
     get:
       responses:
         '200': {description: Provider capabilities}
+  /api/v1/doctor:
+    get:
+      responses:
+        '200': {description: Health diagnostics (WinPodX-style doctor)}
+        '503': {description: One or more checks failed}
   /api/v1/images:
     get:
       responses:

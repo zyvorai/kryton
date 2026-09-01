@@ -1,6 +1,10 @@
 # Remote deployment
 
-Deploy Kryton to a Linux host over SSH with the same workflow style as GuestKit: **rsync → build → install → verify**.
+Deploy Kryton to a Linux host over SSH — same workflow style as GuestKit: **rsync → build → install → verify**.
+
+Ideal for lab control planes, integration testing, and staging before Helm/KubeVirt production.
+
+---
 
 ## Quick start
 
@@ -28,6 +32,15 @@ ssh -L 8080:127.0.0.1:8080 sus@<host>
 open http://localhost:8080
 ```
 
+Verify:
+
+```bash
+curl -s http://<host>:8080/readyz
+ssh sus@<host> krytonctl doctor
+```
+
+---
+
 ## Profiles
 
 | Profile | Flags | What it does |
@@ -40,6 +53,8 @@ open http://localhost:8080
 | Binaries only | `--no-service` | install CLIs/daemon without enabling systemd |
 | Uninstall | `--uninstall` | stop unit, remove binaries and staging dir |
 
+---
+
 ## What gets installed
 
 | Path | Purpose |
@@ -51,20 +66,44 @@ open http://localhost:8080
 
 The systemd unit is intentionally a **lab demo**. For production KubeVirt, use Helm (`deploy/helm/kryton`) and set `KRYTON_PROVIDER=kubevirt` with API-key auth — see [DEPLOYMENT.md](DEPLOYMENT.md).
 
+### Switching to dockur after deploy
+
+Edit the systemd unit or run manually:
+
+```bash
+export KRYTON_PROVIDER=dockur
+export KRYTON_DOCKUR_RUNTIME=docker
+export KRYTON_DOCKUR_PUBLIC_HOST=<host-ip>
+krytond
+```
+
+See [DOCKUR.md](DOCKUR.md).
+
+---
+
 ## Requirements
 
-**Local:** `ssh`, `rsync`, optional `sshpass` for password auth.
+**Local:** `ssh`, `rsync`, optional `sshpass` for password auth (deprecated).
 
 **Remote:** Linux x86_64 or arm64. Non-root users need passwordless `sudo` for install into `/usr/local/bin` and systemd.
 
+---
+
 ## Production (Helm) after SSH staging
 
+Once you have a cluster with KubeVirt + CDI:
+
 ```bash
-# On a cluster with KubeVirt + CDI
 kubectl -n kryton create secret generic kryton-auth --from-file=keys.json
 helm upgrade --install kryton ./deploy/helm/kryton -n kryton --create-namespace
 ```
 
+---
+
 ## Logs
 
-Set `KRYTON_DEPLOY_LOG` to capture a timestamped log under `~/.kryton/`.
+Set `KRYTON_DEPLOY_LOG` to capture a timestamped log under `~/.kryton/`:
+
+```bash
+KRYTON_DEPLOY_LOG=~/deploy.log ./scripts/deploy-remote.sh sus@host --key
+```

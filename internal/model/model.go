@@ -62,17 +62,20 @@ type Condition struct {
 }
 
 type Machine struct {
-	ID          string       `json:"id"`
-	Project     string       `json:"project"`
-	Provider    string       `json:"provider"`
-	State       MachineState `json:"state"`
-	Spec        MachineSpec  `json:"spec"`
-	ProviderRef ProviderRef  `json:"providerRef"`
-	IPAddresses []string     `json:"ipAddresses,omitempty"`
-	Conditions  []Condition  `json:"conditions,omitempty"`
-	CreatedAt   time.Time    `json:"createdAt"`
-	UpdatedAt   time.Time    `json:"updatedAt"`
-	ExpiresAt   *time.Time   `json:"expiresAt,omitempty"`
+	ID              string       `json:"id"`
+	Project         string       `json:"project"`
+	Provider        string       `json:"provider"`
+	State           MachineState `json:"state"`
+	Spec            MachineSpec  `json:"spec"`
+	ProviderRef     ProviderRef  `json:"providerRef"`
+	IPAddresses     []string     `json:"ipAddresses,omitempty"`
+	ConsoleURL      string       `json:"consoleUrl,omitempty"`
+	ProgressPercent *int         `json:"progressPercent,omitempty"`
+	Message         string       `json:"message,omitempty"`
+	Conditions      []Condition  `json:"conditions,omitempty"`
+	CreatedAt       time.Time    `json:"createdAt"`
+	UpdatedAt       time.Time    `json:"updatedAt"`
+	ExpiresAt       *time.Time   `json:"expiresAt,omitempty"`
 }
 
 type Snapshot struct {
@@ -93,6 +96,7 @@ type Image struct {
 	MinCPU        int      `json:"minCpu"`
 	MinMemoryMiB  int      `json:"minMemoryMiB"`
 	DefaultDiskGB int      `json:"defaultDiskGiB"`
+	DockurVersion string   `json:"dockurVersion,omitempty"`
 	Tags          []string `json:"tags,omitempty"`
 }
 
@@ -103,6 +107,19 @@ type Capabilities struct {
 	TTL           bool   `json:"ttl"`
 	LiveMigration bool   `json:"liveMigration"`
 	Console       bool   `json:"console"`
+}
+
+type DoctorFinding struct {
+	Check   string `json:"check"`
+	Status  string `json:"status"` // pass | warn | fail
+	Message string `json:"message"`
+	Hint    string `json:"hint,omitempty"`
+}
+
+type DoctorReport struct {
+	Provider string          `json:"provider"`
+	Healthy  bool            `json:"healthy"`
+	Findings []DoctorFinding `json:"findings"`
 }
 
 type Summary struct {

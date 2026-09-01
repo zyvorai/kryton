@@ -25,7 +25,7 @@ func New() *Provider {
 func (p *Provider) Name() string                 { return "demo" }
 func (p *Provider) Health(context.Context) error { return nil }
 func (p *Provider) Capabilities(context.Context) (model.Capabilities, error) {
-	return model.Capabilities{Provider: p.Name(), Snapshots: true, Networks: true, TTL: true}, nil
+	return model.Capabilities{Provider: p.Name(), Snapshots: true, Networks: true, TTL: true, Console: true}, nil
 }
 
 func (p *Provider) Create(_ context.Context, project string, spec model.MachineSpec) (*model.Machine, error) {
@@ -44,8 +44,13 @@ func (p *Provider) Create(_ context.Context, project string, spec model.MachineS
 	m := model.Machine{
 		ID: machineID, Project: project, Provider: p.Name(), State: model.StateRunning, Spec: spec,
 		ProviderRef: model.ProviderRef{Provider: p.Name(), Namespace: project, Name: spec.Name},
-		IPAddresses: []string{fmt.Sprintf("10.44.0.%d", p.nextIP)}, CreatedAt: now, UpdatedAt: now,
+		IPAddresses: []string{fmt.Sprintf("10.44.0.%d", p.nextIP)},
+		ConsoleURL:  fmt.Sprintf("https://console.demo.local/%s", machineID),
+		Message:     "Demo machine ready",
+		CreatedAt:   now, UpdatedAt: now,
 	}
+	pct := 100
+	m.ProgressPercent = &pct
 	p.nextIP++
 	if spec.TTLMinutes > 0 {
 		expires := now.Add(time.Duration(spec.TTLMinutes) * time.Minute)
@@ -117,6 +122,10 @@ func clone(m model.Machine) *model.Machine {
 	c := m
 	c.IPAddresses = append([]string(nil), m.IPAddresses...)
 	c.Conditions = append([]model.Condition(nil), m.Conditions...)
+	if m.ProgressPercent != nil {
+		v := *m.ProgressPercent
+		c.ProgressPercent = &v
+	}
 	if m.Spec.Labels != nil {
 		c.Spec.Labels = map[string]string{}
 		for k, v := range m.Spec.Labels {

@@ -1,6 +1,6 @@
 # Kryton architecture
 
-Kryton is deliberately split at the provider boundary.
+Kryton is deliberately split at the **provider boundary**. Callers see one stable machine API; providers translate it into demo state, dockur compose stacks, or KubeVirt VirtualMachines.
 
 ```text
 Consumers
@@ -12,31 +12,82 @@ Consumers
                          |
              provider.Provider contract
                          |
-             +-----------+-----------+
-             |                       |
-          demo                    KubeVirt
-                                     |
-                             Kubernetes REST API
-                                     |
+        +---------+------+-----------+
+        |         |                  |
+     demo      dockur            KubeVirt
+                  |                  |
+           dockur/windows     Kubernetes REST
+           (Docker/Podman+KVM)       |
                                QEMU / KVM VMs
 ```
 
+---
+
+## Providers
+
+| Provider | Source of truth | Real Windows |
+|----------|-----------------|--------------|
+| **demo** | In-memory map | No — instant fake machines for eval |
+| **dockur** | Compose state under `KRYTON_DOCKUR_DATA_DIR` | Yes — via [dockur/windows](https://github.com/dockur/windows) |
+| **kubevirt** | Kubernetes API | Yes — operator golden images via CDI |
+
+See [DOCKUR.md](DOCKUR.md) for the lab provider. See [DEPLOYMENT.md](DEPLOYMENT.md) for KubeVirt production.
+
+---
+
 ## Stable identity
 
-A Kryton machine receives a UUID independent from its provider name. The KubeVirt provider records the UUID and project in labels and preserves the original Kryton specification in a managed annotation. External clients therefore never need to address `namespace/name` directly.
+A Kryton machine receives a **UUID** independent from its provider name. The KubeVirt provider records the UUID and project in labels and preserves the original Kryton specification in a managed annotation. External clients therefore never need to address `namespace/name` directly.
+
+The dockur provider maps UUIDs to compose project directories. The demo provider holds machines in a process-local map.
+
+---
 
 ## Source of truth
 
-For the KubeVirt provider, Kubernetes is the source of truth. Kryton is stateless with respect to machine inventory and can be restarted without losing machine identity. The demo provider is intentionally in-memory.
+- **KubeVirt** — Kubernetes is authoritative. Kryton is stateless with respect to machine inventory and can be restarted without losing machine identity.
+- **demo** — intentionally in-memory; data is lost on restart.
+- **dockur** — compose projects and disk images persist under `KRYTON_DOCKUR_DATA_DIR`.
+
+---
 
 ## Projects
 
-Kryton projects map to provider isolation domains. In the KubeVirt provider a project maps to a Kubernetes namespace, optionally prefixed by `KRYTON_NAMESPACE_PREFIX`.
+Kryton projects map to provider isolation domains:
+
+- **KubeVirt** — one Kubernetes namespace per project (optionally prefixed by `KRYTON_NAMESPACE_PREFIX`).
+- **dockur** — project is recorded on the machine; compose stacks are namespaced by machine ID.
+- **demo** — logical grouping only.
+
+RBAC roles (`viewer` · `operator` · `admin`) are always intersected with project membership.
+
+---
 
 ## Events
 
-Lifecycle events use the CloudEvents structured envelope. They are available through the REST history endpoint, an authenticated SSE stream, and an optional webhook sink.
+Lifecycle events use the CloudEvents structured envelope. They are available through:
+
+- `GET /api/v1/events` — history
+- `GET /api/v1/events/stream` — authenticated SSE
+- Optional webhook sink (`KRYTON_EVENT_WEBHOOK_URL`)
+
+Dockur provisioning additionally emits `io.kryton.machine.install.started` when unattended setup begins.
+
+---
+
+## Diagnostics
+
+`internal/doctor` runs provider-aware health checks exposed as `GET /api/v1/doctor` and `krytonctl doctor`. Checks include auth mode, projects, catalog, provider health, and (for dockur) runtime, compose, KVM, and data-dir writability.
+
+---
 
 ## Security boundaries
 
-Kryton does not expose raw QEMU, RDP, WinRM, or arbitrary PowerShell execution. Authentication supports API keys for service-to-service use or trusted identity headers from an authenticated reverse proxy. Production KubeVirt mode refuses to start with authentication disabled unless the operator explicitly opts into insecure operation.
+Kryton does not expose raw QEMU, RDP, WinRM, or arbitrary PowerShell execution through the API.
+
+- **API keys** for service-to-service use (SHA-256 digests stored, raw tokens never persisted).
+- **Proxy auth** for browser SSO via trusted reverse proxy headers.
+- Production KubeVirt mode refuses to start with authentication disabled unless the operator explicitly opts into insecure operation (`KRYTON_ALLOW_INSECURE=true`).
+- The dockur provider is intended for labs; use API-key auth on shared hosts.
+
+Console and RDP ports for dockur are published on the host — restrict with firewall policy.
