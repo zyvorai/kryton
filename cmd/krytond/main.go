@@ -179,7 +179,8 @@ func main() {
 		DockurDataDir: cfg.Dockur.DataDir, DockurRuntime: cfg.Dockur.Runtime,
 		ImageNamespace: effectiveImageNS, NamespacePrefix: cfg.NamespacePrefix, StorageClass: effectiveSC,
 		StorageStore: storageStore, StorageSetup: storageSetup, SettingsStore: settingsStore, KubeClient: kubeClient, Golden: goldenMgr,
-		AllowInsecure: cfg.AllowInsecure, DefaultProjectEnv: cfg.DefaultProject, ImageNamespaceEnv: cfg.ImageNamespace,
+		AllowInsecure: cfg.AllowInsecure, LabAutoAuth: cfg.LabAutoAuth, LabTokenFile: cfg.LabTokenFile,
+		DefaultProjectEnv: cfg.DefaultProject, ImageNamespaceEnv: cfg.ImageNamespace,
 		StorageConfigPath: storagePath, SettingsConfigPath: settingsPath,
 		CORSOrigins: cfg.CORSOrigins,
 		Jobs: &jobs.Service{

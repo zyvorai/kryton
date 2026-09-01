@@ -245,6 +245,8 @@ OpenAPI: [`openapi.yaml`](openapi.yaml) (also served at `/openapi.yaml`). Full c
 |----------|---------|-------------|
 | `KRYTON_PROVIDER` | `demo` | `demo` · `dockur` · `kubevirt` |
 | `KRYTON_AUTH_MODE` | `disabled` | `disabled` · `apikey` · `proxy` |
+| `KRYTON_ALLOW_INSECURE` | `false` | Lab/dev TLS skip + enables lab auto-auth |
+| `KRYTON_LAB_AUTO_AUTH` | `false` | UI auto-loads bearer from `lab.token` (requires apikey + allow insecure) |
 | `KRYTON_PROJECTS` | `default` | Comma-separated project list |
 | `KRYTON_ADDR` | `:8080` | Listen address |
 | `KRYTON_DOCKUR_RUNTIME` | `docker` | `docker` or `podman` |

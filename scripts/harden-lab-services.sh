@@ -40,6 +40,8 @@ Group=docker
 Environment=KRYTON_PROVIDER=dockur
 Environment=KRYTON_AUTH_MODE=apikey
 Environment=KRYTON_API_KEYS_FILE=${KEYS_FILE}
+Environment=KRYTON_LAB_AUTO_AUTH=true
+Environment=KRYTON_LAB_TOKEN_FILE=${KEYS_DIR}/lab.token
 Environment=KRYTON_ALLOW_INSECURE=true
 Environment=KRYTON_ADDR=:${DOCKUR_PORT}
 Environment=KRYTON_DOCKUR_RUNTIME=docker
@@ -74,6 +76,8 @@ User=${USER_NAME}
 Environment=KRYTON_PROVIDER=kubevirt
 Environment=KRYTON_AUTH_MODE=apikey
 Environment=KRYTON_API_KEYS_FILE=${KEYS_FILE}
+Environment=KRYTON_LAB_AUTO_AUTH=true
+Environment=KRYTON_LAB_TOKEN_FILE=${KEYS_DIR}/lab.token
 Environment=KRYTON_ALLOW_INSECURE=true
 Environment=KRYTON_ADDR=:${KV_PORT}
 Environment=KRYTON_IMAGE_NAMESPACE=kryton-images
@@ -130,5 +134,5 @@ Lab hardened (apikey auth).
   export KRYTON_TOKEN=\$(cat ${KEYS_DIR}/lab.token)
   export KRYTON_URL=http://${PUBLIC_HOST}:${DOCKUR_PORT}
 
-Paste the token in the UI auth dialog on first visit.
+Paste the token in the UI auth dialog on first visit (skip when KRYTON_LAB_AUTO_AUTH=true — UI auto-connects).
 EOF

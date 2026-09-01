@@ -50,6 +50,8 @@ type Config struct {
 	Inventory       *images.Inventory
 	Log             *slog.Logger
 	AllowInsecure   bool
+	LabAutoAuth     bool
+	LabTokenFile    string
 	DefaultProjectEnv  string
 	ImageNamespaceEnv  string
 	StorageConfigPath  string
@@ -81,6 +83,8 @@ type Server struct {
 	inventory       *images.Inventory
 	log             *slog.Logger
 	allowInsecure   bool
+	labAutoAuth     bool
+	labTokenFile    string
 	defaultProjectEnv  string
 	imageNamespaceEnv  string
 	storageConfigPath  string
@@ -114,7 +118,8 @@ func New(cfg Config) *Server {
 		projects: cfg.Projects, defaultProject: cfg.DefaultProject, authMode: cfg.AuthMode,
 		dockurDataDir: cfg.DockurDataDir, dockurRuntime: cfg.DockurRuntime, imageNamespace: cfg.ImageNamespace,
 		namespacePrefix: cfg.NamespacePrefix, storageClass: cfg.StorageClass, storageStore: cfg.StorageStore, storageSetup: cfg.StorageSetup, settingsStore: cfg.SettingsStore, kubeClient: cfg.KubeClient, golden: cfg.Golden, jobs: cfg.Jobs, inventory: cfg.Inventory, log: cfg.Log,
-		allowInsecure: cfg.AllowInsecure, defaultProjectEnv: cfg.DefaultProjectEnv, imageNamespaceEnv: cfg.ImageNamespaceEnv,
+		allowInsecure: cfg.AllowInsecure, labAutoAuth: cfg.LabAutoAuth, labTokenFile: cfg.LabTokenFile,
+		defaultProjectEnv: cfg.DefaultProjectEnv, imageNamespaceEnv: cfg.ImageNamespaceEnv,
 		storageConfigPath: cfg.StorageConfigPath, settingsConfigPath: cfg.SettingsConfigPath, corsOrigins: cfg.CORSOrigins,
 	}
 }
@@ -168,6 +173,7 @@ func (s *Server) Handler() http.Handler {
 	root.HandleFunc("GET /api/openapi.yaml", s.serveOpenAPI)
 	// Exact match only — a trailing-slash pattern would steal /api/v1/*.
 	root.HandleFunc("GET /api/v1", s.apiDiscovery)
+	root.HandleFunc("GET /api/v1/lab/bootstrap", s.labBootstrap)
 	root.Handle("/api/", s.auth.Middleware(apiMux))
 	root.Handle("/", s.staticHandler())
 	return s.requestID(s.accessLog(s.cors(s.security(s.recoverer(root)))))

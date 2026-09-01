@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -26,6 +27,8 @@ type Config struct {
 	ProxySecretFile    string
 	TrustProxy         bool
 	AllowInsecure      bool
+	LabAutoAuth        bool
+	LabTokenFile       string
 	EventWebhookURL    string
 	EventWebhookSecret string
 	EventsFile         string
@@ -79,6 +82,8 @@ func Load() (Config, error) {
 		ProxySecretFile:    os.Getenv("KRYTON_PROXY_SECRET_FILE"),
 		TrustProxy:         boolEnv("KRYTON_TRUST_PROXY", false),
 		AllowInsecure:      boolEnv("KRYTON_ALLOW_INSECURE", false),
+		LabAutoAuth:        boolEnv("KRYTON_LAB_AUTO_AUTH", false),
+		LabTokenFile:       os.Getenv("KRYTON_LAB_TOKEN_FILE"),
 		EventWebhookURL:    os.Getenv("KRYTON_EVENT_WEBHOOK_URL"),
 		EventWebhookSecret: os.Getenv("KRYTON_EVENT_WEBHOOK_SECRET"),
 		EventsFile:         os.Getenv("KRYTON_EVENTS_FILE"),
@@ -113,6 +118,9 @@ func Load() (Config, error) {
 		if err := cfg.resolveKubernetes(); err != nil {
 			return Config{}, err
 		}
+	}
+	if cfg.LabTokenFile == "" && cfg.APIKeysFile != "" {
+		cfg.LabTokenFile = filepath.Join(filepath.Dir(cfg.APIKeysFile), "lab.token")
 	}
 	if err := cfg.Validate(); err != nil {
 		return Config{}, err
@@ -169,6 +177,14 @@ func (c Config) Validate() error {
 		}
 	default:
 		return fmt.Errorf("unsupported KRYTON_AUTH_MODE %q", c.AuthMode)
+	}
+	if c.LabAutoAuth {
+		if !c.AllowInsecure {
+			return errors.New("KRYTON_LAB_AUTO_AUTH requires KRYTON_ALLOW_INSECURE=true")
+		}
+		if c.AuthMode != "apikey" {
+			return errors.New("KRYTON_LAB_AUTO_AUTH requires KRYTON_AUTH_MODE=apikey")
+		}
 	}
 	if (c.TLS.CertFile == "") != (c.TLS.KeyFile == "") {
 		return errors.New("both KRYTON_TLS_CERT_FILE and KRYTON_TLS_KEY_FILE must be set together")
