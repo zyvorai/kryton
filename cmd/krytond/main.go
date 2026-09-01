@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Command krytond is the Kryton daemon: it loads configuration from the
+// environment, selects and wires a provider backend (demo, dockur, or
+// kubevirt), starts the auth, events, metrics, and TTL-reconciler
+// subsystems, serves the embedded operator web UI, and runs the HTTP(S)
+// API server defined in internal/api.
 package main
 
 import (

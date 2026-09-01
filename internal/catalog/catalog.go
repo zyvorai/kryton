@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package catalog holds the list of Windows image definitions Kryton
+// knows how to deploy — a built-in default set, or an operator-supplied
+// JSON file — keyed by image ID and exposed to the API, CLI, and
+// provider layers.
 package catalog
 
 import (

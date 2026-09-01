@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package golden manages the golden-image pipeline: driving
+// scripts/build-golden-image.sh (dockur boot → Sysprep → qcow2) and
+// scripts/bootstrap-kubevirt-images.sh (import into a KubeVirt CDI
+// DataSource), tracking in-flight builds/bootstraps so concurrent
+// requests for the same image are coalesced.
 package golden
 
 import (

@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package api implements krytond's public HTTP surface: the /api/v1 REST
+// routes for machines, images, jobs, settings, storage, and events (plus
+// /openapi.yaml and the embedded operator web UI), backed by a
+// provider.Provider and enforcing auth/project scoping on every request.
 package api
 
 import (

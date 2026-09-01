@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package images enriches the static catalog of supported Windows images
+// with live deployability state — whether a CDI DataSource already exists
+// in Kubernetes and whether a golden qcow2 artifact has been built —
+// so the Images UI and API can show what is actually usable, not just
+// what is defined.
 package images
 
 import (

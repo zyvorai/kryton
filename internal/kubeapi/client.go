@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package kubeapi is a minimal Kubernetes REST API client used by the
+// kubevirt provider and doctor checks: it talks directly to the
+// apiserver over HTTP(S) with bearer-token, client-cert, or in-cluster
+// service-account auth, without depending on client-go.
 package kubeapi
 
 import (

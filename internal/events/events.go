@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package events implements Kryton's CloudEvents-formatted audit trail:
+// a Bus that records machine lifecycle events in memory (optionally
+// persisted to an append-only JSONL file), fans them out to SSE
+// subscribers for GET /api/v1/events/stream, and optionally delivers
+// them to an HMAC-SHA256-signed webhook.
 package events
 
 import (

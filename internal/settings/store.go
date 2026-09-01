@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package settings persists operator-tunable runtime settings (default
+// project, image namespace, event webhook URL, Atlas integration config)
+// as JSON under ~/.kryton/settings.json, so they can be changed from the
+// Settings UI without restarting krytond.
 package settings
 
 import (

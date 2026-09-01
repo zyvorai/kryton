@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package jobs unifies krytond's long-running background operations —
+// golden-image builds and storage setup — into a single model.Job list
+// so the Activity/Jobs UI and API can show progress across otherwise
+// unrelated subsystems.
 package jobs
 
 import (

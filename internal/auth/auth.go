@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package auth implements krytond's authentication and role model:
+// disabled, apikey (hashed keys loaded from a JSON file), and proxy
+// (trusting X-Kryton-User/-Role/-Projects headers from a reverse proxy).
+// It resolves each request to a Principal scoped to a Role (viewer,
+// operator, admin) and a set of allowed projects.
 package auth
 
 import (

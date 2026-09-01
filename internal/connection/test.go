@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package connection runs a battery of connectivity probes — Kubernetes
+// API reachability, storage class availability, and provider health —
+// and aggregates them into a Result for the Settings UI's "Test
+// connection" action and related diagnostics.
 package connection
 
 import (

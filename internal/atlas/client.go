@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package atlas is the client for the Zyvor Atlas storage control plane:
+// it carries the integration Config (base URL, bearer token, product ID)
+// surfaced in Settings → Integrations and runs connectivity Probes behind
+// POST /api/v1/integrations/atlas/test.
 package atlas
 
 import (

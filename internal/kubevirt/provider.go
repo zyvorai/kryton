@@ -12,6 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package kubevirt implements provider.Provider on top of KubeVirt and
+// CDI: it creates VirtualMachines and DataVolumes through internal/kubeapi
+// (cloning from an operator-managed golden-image DataSource), isolates
+// projects into per-project namespaces (namespacePrefix+project), and
+// tags every resource it owns with kryton.io/managed, kryton.io/id, and
+// kryton.io/project labels so it can find and reconcile them later.
 package kubevirt
 
 import (

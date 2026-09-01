@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package model defines the domain types shared by the API, CLI, and all
+// provider backends: machine lifecycle state, compute/disk/network specs,
+// dockur-specific options, capabilities, snapshots, images, jobs, and
+// doctor reports — the common vocabulary that keeps providers
+// interchangeable.
 package model
 
 import (

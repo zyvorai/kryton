@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package id generates the stable machine and snapshot identifiers
+// Kryton uses everywhere in place of raw provider-native identifiers,
+// keeping IDs independent of namespace or provider choice.
 package id
 
 import (

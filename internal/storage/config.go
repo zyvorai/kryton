@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package storage discovers Kubernetes StorageClasses and
+// VolumeSnapshotClasses (Rook Ceph, Longhorn, local-path, ...), exposes
+// them to the Settings UI, and persists the operator's chosen default
+// StorageClass for new KubeVirt VM disks.
 package storage
 
 import (

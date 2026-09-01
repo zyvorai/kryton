@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package metrics tracks HTTP request/error counters and per-operation
+// counts and exposes them in Prometheus text-exposition format via an
+// http.HandlerFunc, without pulling in the full Prometheus client library.
 package metrics
 
 import (

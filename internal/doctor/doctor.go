@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package doctor runs environment diagnostics — provider health, catalog
+// validity, Kubernetes/kubeconfig reachability, storage class
+// availability, and dockur runtime checks — and produces the
+// model.DoctorReport behind `krytonctl doctor` and GET /api/v1/doctor.
 package doctor
 
 import (

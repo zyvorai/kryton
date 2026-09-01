@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package demo implements an in-memory provider.Provider for local
+// evaluation and CI smoke tests. It fabricates machines and snapshots per
+// project with no real virtualization backend, so it requires no Docker,
+// KVM, or Kubernetes access.
 package demo
 
 import (

@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package config loads krytond's runtime Config from KRYTON_* environment
+// variables: provider selection, project list, auth mode, storage class,
+// TLS/insecure flags, and file paths for images, API keys, and events.
 package config
 
 import (

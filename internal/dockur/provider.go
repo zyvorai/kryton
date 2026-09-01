@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package dockur implements provider.Provider on top of dockur/windows:
+// it drives Docker or Podman Compose to run real Windows guests in
+// containers, mapping Kryton image IDs (e.g. "windows-11-enterprise") to
+// dockur VERSION codes (e.g. "11e") and exposing web-viewer/RDP ports per
+// machine for lab and development use.
 package dockur
 
 import (

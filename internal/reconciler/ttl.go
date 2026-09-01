@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package reconciler runs krytond's background loops. TTL periodically
+// lists machines across all configured projects through a
+// provider.Provider, deletes those past their expiry, and emits an event
+// on the shared events.Bus for each expiry.
 package reconciler
 
 import (

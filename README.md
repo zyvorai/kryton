@@ -9,10 +9,31 @@ One stable machine API. Kubernetes, KubeVirt, and dockur stay behind the provide
 [![CI](https://github.com/zyvorai/kryton/actions/workflows/ci.yml/badge.svg)](https://github.com/zyvorai/kryton/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/github/license/zyvorai/kryton)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![Go Reference](https://pkg.go.dev/badge/github.com/zyvorai/kryton.svg)](https://pkg.go.dev/github.com/zyvorai/kryton)
 
 [Quick start](#quick-start) · **[How to use](#how-to-use-kryton)** · [User guide](docs/USER-GUIDE.md) · [Customer ready](docs/CUSTOMER.md) · [KubeVirt](#kubevirt-windows-vms) · [Remote deploy](#remote-deploy) · [Dockur lab](#dockur-lab-provider) · [Helm](#helm-kubevirt) · [API](#api) · [All docs](docs/README.md)
 
 </div>
+
+---
+
+## Contents
+
+- [How to use Kryton](#how-to-use-kryton)
+- [Quick start](#quick-start)
+- [Install](#install)
+- [Project layout](#project-layout)
+- [KubeVirt Windows VMs](#kubevirt-windows-vms)
+- [Remote deploy](#remote-deploy)
+- [Dockur lab provider](#dockur-lab-provider)
+- [Helm (KubeVirt)](#helm-kubevirt)
+- [Authentication](#authentication)
+- [API](#api)
+- [Configuration](#configuration)
+- [Development](#development)
+- [What Kryton is not](#what-kryton-is-not)
+- [Docs](#docs)
+- [License](#license)
 
 ---
 
@@ -192,6 +213,47 @@ docker run --rm -p 8080:8080 \
 
 ---
 
+## Project layout
+
+```text
+cmd/krytond/          krytond binary: HTTP entrypoint + embedded operator UI (web/)
+cmd/krytonctl/         krytonctl binary: CLI client for the same REST API
+
+internal/api/          HTTP handlers, routing, middleware, OpenAPI serving
+internal/provider/      Provider interface — the backend-agnostic machine contract
+internal/demo/          In-memory provider (evaluation, CI smoke tests)
+internal/dockur/        dockur/windows provider (Docker/Podman + KVM lab hosts)
+internal/kubevirt/      KubeVirt provider (production Kubernetes VMs)
+internal/kubeapi/       Thin Kubernetes REST + kubeconfig + WebSocket helpers
+internal/model/         Shared machine/snapshot/capability/job types
+internal/auth/          API-key and proxy authentication
+internal/settings/      Persisted operator settings (storage class, Atlas, auth)
+internal/storage/       StorageClass detection + Rook/Longhorn installer
+internal/golden/        Golden-image (CDI DataSource) lifecycle manager
+internal/catalog/       Image catalog exposed to the UI/CLI
+internal/images/        Image inventory helpers
+internal/jobs/          Long-running job tracking (golden builds, bootstraps)
+internal/events/        CloudEvents history + SSE stream + webhook sink
+internal/reconciler/    TTL-based machine expiry
+internal/doctor/        Provider-aware health checks (krytonctl doctor)
+internal/atlas/         Optional Zyvor Atlas storage-control-plane client
+internal/config/        Environment-variable configuration loading
+internal/metrics/       Prometheus-style metrics
+internal/id/            Stable UUID helpers
+internal/connection/    Shared connection-test plumbing for Settings
+
+deploy/helm/kryton/     Production Helm chart
+deploy/kubevirt/        Namespaces, clone RBAC, DataSource examples
+deploy/rook-ceph/       Block pool, StorageClass, VolumeSnapshotClass
+scripts/                Deploy, harden, golden-image, and KubeVirt bootstrap scripts
+docs/                   Per-role guides — see docs/README.md
+examples/               Sample API payloads (auth keys, images, machine)
+```
+
+Package-level doc comments live alongside the code — browse them on [pkg.go.dev](https://pkg.go.dev/github.com/zyvorai/kryton) or with `go doc ./internal/...`.
+
+---
+
 ## KubeVirt Windows VMs
 
 Create real Windows 11 guests on Kubernetes through the Kryton API — fully automated:
@@ -345,6 +407,24 @@ OpenAPI: [`openapi.yaml`](openapi.yaml) (also served at `/openapi.yaml`). Full c
 | `KRYTON_DOCKUR_PUBLIC_HOST` | `127.0.0.1` | Hostname/IP for console URLs |
 
 Run `krytonctl doctor` after changing provider settings to validate the environment.
+
+---
+
+## Development
+
+```bash
+make check      # gofmt + go test ./... + go vet + build
+make test        # go test ./...
+make race         # go test -race ./...
+make vet          # go vet ./...
+make fmt          # gofmt -w cmd internal
+```
+
+- Provider-specific behavior stays behind `internal/provider.Provider` — never leak `dockur`/`kubevirt` details into `internal/api`.
+- Never expose a raw provider identifier (namespace/name, compose project) as the primary machine ID — only the stable UUID.
+- New source files need the Apache-2.0 header: `./scripts/add-license-headers.sh`.
+- CI (`.github/workflows/ci.yml`) runs `go vet`, `go test`, builds both binaries, and checks `cmd/krytond/web/app.js` syntax on every push/PR to `main`, then publishes `ghcr.io/zyvorai/kryton` on merge.
+- Full guidelines: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 

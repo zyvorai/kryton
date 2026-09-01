@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Command krytonctl is the Kryton CLI: a thin HTTP client over the krytond
+// REST API for scripting and interactive use (list/create/get/start/stop/
+// delete, snapshots, doctor, images, capabilities, events, and API-key
+// token generation), configured via KRYTON_URL, KRYTON_TOKEN, and
+// KRYTON_PROJECT.
 package main
 
 import (
