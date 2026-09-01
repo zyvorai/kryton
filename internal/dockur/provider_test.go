@@ -34,6 +34,22 @@ func TestCatalogOverridesDefault(t *testing.T) {
 	}
 }
 
+func TestConsoleURLAndRDP(t *testing.T) {
+	p := &Provider{
+		publicHost: "lab.example",
+		ports:      map[string]portPair{"m1": {HTTP: 18006, RDP: 13389}},
+	}
+	m := &model.Machine{ID: "m1", Project: "default"}
+	p.normalizeConsole(m)
+	want := "/api/v1/machines/m1/console/?project=default"
+	if m.ConsoleURL != want {
+		t.Fatalf("consoleUrl = %q, want %q", m.ConsoleURL, want)
+	}
+	if m.RdpHost != "lab.example" || m.RdpPort != 13389 {
+		t.Fatalf("rdp = %s:%d", m.RdpHost, m.RdpPort)
+	}
+}
+
 func TestRenderCompose(t *testing.T) {
 	spec := model.MachineSpec{Name: "win1", Image: "windows-11-enterprise", Compute: model.ComputeSpec{CPU: 4, MemoryMiB: 8192}, Disk: model.DiskSpec{SizeGiB: 64}}
 	out := renderCompose(spec, "11e", portPair{HTTP: 18006, RDP: 13389})

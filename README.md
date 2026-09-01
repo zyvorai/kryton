@@ -113,12 +113,17 @@ docker run --rm -p 8080:8080 \
 Create real Windows 11 guests on Kubernetes through the Kryton API — fully automated:
 
 ```bash
-export KRYTON_WINDOWS_IMAGE=/path/to/windows11.qcow2
+# Build golden image (WinForge-style) or use your own qcow2
+VERSION=11e ./scripts/build-golden-image.sh
+# ... Sysprep, then FINALIZE=1 ...
+
+export KRYTON_WINDOWS_IMAGE=./out/windows-11e-golden.qcow2
 ./scripts/setup-kubevirt.sh
 # API on :9088 — create/list/start/stop via REST or krytonctl
 ```
 
-See **[docs/KUBEVIRT.md](docs/KUBEVIRT.md)** for Helm mode, bootstrap-only, and production auth.
+See **[docs/KUBEVIRT.md](docs/KUBEVIRT.md)** for Helm mode, bootstrap-only, and production auth.  
+Golden image pipeline: **[docs/GOLDEN-IMAGES.md](docs/GOLDEN-IMAGES.md)**.
 
 ---
 

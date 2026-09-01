@@ -70,6 +70,8 @@ type Machine struct {
 	ProviderRef     ProviderRef  `json:"providerRef"`
 	IPAddresses     []string     `json:"ipAddresses,omitempty"`
 	ConsoleURL      string       `json:"consoleUrl,omitempty"`
+	RdpHost         string       `json:"rdpHost,omitempty"`
+	RdpPort         int          `json:"rdpPort,omitempty"`
 	ProgressPercent *int         `json:"progressPercent,omitempty"`
 	Message         string       `json:"message,omitempty"`
 	Conditions      []Condition  `json:"conditions,omitempty"`
@@ -96,8 +98,13 @@ type Image struct {
 	MinCPU        int      `json:"minCpu"`
 	MinMemoryMiB  int      `json:"minMemoryMiB"`
 	DefaultDiskGB int      `json:"defaultDiskGiB"`
-	DockurVersion string   `json:"dockurVersion,omitempty"`
-	Tags          []string `json:"tags,omitempty"`
+	DockurVersion      string   `json:"dockurVersion,omitempty"`
+	Tags               []string `json:"tags,omitempty"`
+	Availability       string   `json:"availability,omitempty"` // stored | on-demand | catalog
+	StorageSource      string   `json:"storageSource,omitempty"` // cdi | dockur | golden | demo
+	StorageNamespace   string   `json:"storageNamespace,omitempty"`
+	StoragePath        string   `json:"storagePath,omitempty"`
+	Ready              bool     `json:"ready"`
 }
 
 type Capabilities struct {
@@ -107,6 +114,7 @@ type Capabilities struct {
 	TTL           bool   `json:"ttl"`
 	LiveMigration bool   `json:"liveMigration"`
 	Console       bool   `json:"console"`
+	GoldenImages  bool   `json:"goldenImages"`
 }
 
 type DoctorFinding struct {

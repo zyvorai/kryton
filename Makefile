@@ -1,4 +1,4 @@
-.PHONY: run build test race vet fmt check demo image deploy-remote bootstrap-kubevirt setup-kubevirt
+.PHONY: run build test race vet fmt check demo image deploy-remote bootstrap-kubevirt setup-kubevirt build-golden
 
 run:
 	go run ./cmd/krytond
@@ -34,9 +34,28 @@ deploy-remote:
 	./scripts/deploy-remote.sh $(if $(U),$(U)@)$(H) $(ARGS)
 
 bootstrap-kubevirt:
-	@test -n "$(IMAGE)" || (echo "Usage: make bootstrap-kubevirt IMAGE=/path/to/windows11.qcow2"; exit 1)
-	KRYTON_WINDOWS_IMAGE="$(IMAGE)" ./scripts/bootstrap-kubevirt-images.sh
+	@if [ -z "$(IMAGE)" ] && [ -z "$(URL)" ]; then \
+		echo "Usage: make bootstrap-kubevirt IMAGE=/path/to/win.qcow2 [ID=windows-11-enterprise]"; \
+		echo "   or: make bootstrap-kubevirt URL=https://artifacts.example/win.qcow2 [ID=...]"; \
+		exit 1; \
+	fi
+	@if [ -n "$(URL)" ]; then \
+		KRYTON_IMAGE_URL="$(URL)" KRYTON_IMAGE_ID="$(or $(ID),windows-11-enterprise)" ./scripts/bootstrap-kubevirt-images.sh --http; \
+	else \
+		KRYTON_WINDOWS_IMAGE="$(IMAGE)" KRYTON_IMAGE_ID="$(or $(ID),windows-11-enterprise)" ./scripts/bootstrap-kubevirt-images.sh; \
+	fi
+
+build-golden:
+	VERSION="$(or $(VERSION),11e)" FINALIZE="$(or $(FINALIZE),0)" ./scripts/build-golden-image.sh $(if $(filter 1,$(AUTO)),--auto,)
 
 setup-kubevirt:
-	@test -n "$(IMAGE)" || (echo "Usage: make setup-kubevirt IMAGE=/path/to/windows11.qcow2 [ARGS='--helm']"; exit 1)
-	KRYTON_WINDOWS_IMAGE="$(IMAGE)" ./scripts/setup-kubevirt.sh $(ARGS)
+	@if [ -z "$(IMAGE)" ] && [ -z "$(URL)" ]; then \
+		echo "Usage: make setup-kubevirt IMAGE=/path/to/win.qcow2 [ARGS='--helm']"; \
+		echo "   or: make setup-kubevirt URL=https://artifacts.example/win.qcow2"; \
+		exit 1; \
+	fi
+	@if [ -n "$(URL)" ]; then \
+		KRYTON_IMAGE_URL="$(URL)" ./scripts/setup-kubevirt.sh --http $(ARGS); \
+	else \
+		KRYTON_WINDOWS_IMAGE="$(IMAGE)" ./scripts/setup-kubevirt.sh $(ARGS); \
+	fi

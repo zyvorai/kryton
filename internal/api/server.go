@@ -15,6 +15,9 @@ import (
 	"github.com/zyvorai/kryton/internal/catalog"
 	"github.com/zyvorai/kryton/internal/doctor"
 	"github.com/zyvorai/kryton/internal/events"
+	"github.com/zyvorai/kryton/internal/golden"
+	"github.com/zyvorai/kryton/internal/images"
+	"github.com/zyvorai/kryton/internal/jobs"
 	"github.com/zyvorai/kryton/internal/kubeapi"
 	"github.com/zyvorai/kryton/internal/metrics"
 	"github.com/zyvorai/kryton/internal/model"
@@ -36,6 +39,9 @@ type Config struct {
 	ImageNamespace  string
 	NamespacePrefix string
 	KubeClient      *kubeapi.Client
+	Golden          *golden.Manager
+	Jobs            *jobs.Service
+	Inventory       *images.Inventory
 	Log             *slog.Logger
 }
 
@@ -54,6 +60,9 @@ type Server struct {
 	imageNamespace  string
 	namespacePrefix string
 	kubeClient      *kubeapi.Client
+	golden          *golden.Manager
+	jobs            *jobs.Service
+	inventory       *images.Inventory
 	log             *slog.Logger
 }
 
@@ -81,7 +90,7 @@ func New(cfg Config) *Server {
 		p: cfg.Provider, catalog: cfg.Catalog, events: cfg.Events, auth: cfg.Auth, metrics: cfg.Metrics, web: cfg.Web,
 		projects: cfg.Projects, defaultProject: cfg.DefaultProject, authMode: cfg.AuthMode,
 		dockurDataDir: cfg.DockurDataDir, dockurRuntime: cfg.DockurRuntime, imageNamespace: cfg.ImageNamespace,
-		namespacePrefix: cfg.NamespacePrefix, kubeClient: cfg.KubeClient, log: cfg.Log,
+		namespacePrefix: cfg.NamespacePrefix, kubeClient: cfg.KubeClient, golden: cfg.Golden, jobs: cfg.Jobs, inventory: cfg.Inventory, log: cfg.Log,
 	}
 }
 
@@ -92,11 +101,17 @@ func (s *Server) Handler() http.Handler {
 	apiMux.HandleFunc("GET /api/v1/capabilities", s.capabilities)
 	apiMux.HandleFunc("GET /api/v1/doctor", s.doctor)
 	apiMux.HandleFunc("GET /api/v1/images", s.images)
+	apiMux.HandleFunc("GET /api/v1/golden", s.goldenList)
+	apiMux.HandleFunc("POST /api/v1/golden", s.goldenStart)
+	apiMux.HandleFunc("GET /api/v1/golden/{id}", s.goldenGet)
+	apiMux.HandleFunc("GET /api/v1/jobs", s.listJobs)
+	apiMux.HandleFunc("GET /api/v1/jobs/{id}", s.getJob)
 	apiMux.HandleFunc("GET /api/v1/summary", s.summary)
 	apiMux.HandleFunc("GET /api/v1/machines", s.listMachines)
 	apiMux.HandleFunc("POST /api/v1/machines", s.createMachine)
 	apiMux.HandleFunc("GET /api/v1/machines/{id}", s.getMachine)
 	apiMux.HandleFunc("GET /api/v1/machines/{id}/console", s.machineConsole)
+	apiMux.HandleFunc("/api/v1/machines/{id}/console/{path...}", s.machineConsole)
 	apiMux.HandleFunc("GET /api/v1/machines/{id}/vnc", s.machineVNC)
 	apiMux.HandleFunc("DELETE /api/v1/machines/{id}", s.deleteMachine)
 	apiMux.HandleFunc("POST /api/v1/machines/{id}/start", s.startMachine)
@@ -128,6 +143,7 @@ func (s *Server) capabilities(w http.ResponseWriter, r *http.Request) {
 		s.writeErr(w, r, err)
 		return
 	}
+	c.GoldenImages = goldenEnabled(s.golden)
 	jsonResponse(w, http.StatusOK, c)
 }
 func (s *Server) doctor(w http.ResponseWriter, r *http.Request) {
@@ -149,7 +165,11 @@ func (s *Server) doctor(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, status, report)
 }
 func (s *Server) images(w http.ResponseWriter, r *http.Request) {
-	jsonResponse(w, http.StatusOK, listResponse[model.Image]{Items: s.catalog.List()})
+	items := s.catalog.List()
+	if s.inventory != nil {
+		items = s.inventory.Enrich(r.Context(), s.catalog)
+	}
+	jsonResponse(w, http.StatusOK, listResponse[model.Image]{Items: items})
 }
 
 func (s *Server) summary(w http.ResponseWriter, r *http.Request) {

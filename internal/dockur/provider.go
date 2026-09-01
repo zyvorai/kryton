@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -93,6 +94,33 @@ func New(cfg Config) (*Provider, error) {
 
 func (p *Provider) Name() string { return "dockur" }
 
+func (p *Provider) ConsoleTarget(_ context.Context, project, machineID string) (*provider.ConsoleTarget, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if _, ok := p.machines[project][machineID]; !ok {
+		return nil, provider.ErrNotFound
+	}
+	ports, ok := p.ports[machineID]
+	if !ok {
+		return nil, fmt.Errorf("console ports not allocated for machine %s", machineID)
+	}
+	return &provider.ConsoleTarget{
+		Kind:        "web",
+		UpstreamURL: fmt.Sprintf("http://127.0.0.1:%d", ports.HTTP),
+	}, nil
+}
+
+func (p *Provider) consoleURL(project, machineID string) string {
+	return fmt.Sprintf("/api/v1/machines/%s/console/?project=%s", machineID, url.QueryEscape(project))
+}
+
+func (p *Provider) upstreamURL(machineID string) string {
+	if ports, ok := p.ports[machineID]; ok {
+		return fmt.Sprintf("http://127.0.0.1:%d/", ports.HTTP)
+	}
+	return ""
+}
+
 func (p *Provider) Capabilities(context.Context) (model.Capabilities, error) {
 	return model.Capabilities{Provider: p.Name(), Snapshots: false, Networks: false, TTL: true, Console: true}, nil
 }
@@ -147,7 +175,7 @@ func (p *Provider) Create(ctx context.Context, project string, spec model.Machin
 	m := model.Machine{
 		ID: machineID, Project: project, Provider: p.Name(), State: model.StateProvisioning, Spec: spec,
 		ProviderRef:     model.ProviderRef{Provider: p.Name(), Namespace: project, Name: spec.Name},
-		ConsoleURL:      fmt.Sprintf("http://%s:%d/", p.publicHost, ports.HTTP),
+		ConsoleURL:      p.consoleURL(project, machineID),
 		ProgressPercent: &progress,
 		Message:         "Windows image download / unattended install in progress (dockur web viewer)",
 		CreatedAt:       now, UpdatedAt: now,
@@ -297,15 +325,17 @@ func (p *Provider) compose(ctx context.Context, dir string, args ...string) erro
 }
 
 func (p *Provider) refreshLocked(ctx context.Context, m *model.Machine) {
+	p.normalizeConsole(m)
 	if m.State == model.StateStopped || m.State == model.StateFailed || m.State == model.StateDeleting {
 		return
 	}
-	if m.ConsoleURL == "" {
+	upstream := p.upstreamURL(m.ID)
+	if upstream == "" {
 		return
 	}
 	cctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	req, err := http.NewRequestWithContext(cctx, http.MethodGet, m.ConsoleURL, nil)
+	req, err := http.NewRequestWithContext(cctx, http.MethodGet, upstream, nil)
 	if err != nil {
 		return
 	}
@@ -328,6 +358,14 @@ func (p *Provider) refreshLocked(ctx context.Context, m *model.Machine) {
 			m.Message = "Console reachable — complete Windows setup in the web viewer, then use RDP"
 			m.UpdatedAt = time.Now().UTC()
 		}
+	}
+}
+
+func (p *Provider) normalizeConsole(m *model.Machine) {
+	if ports, ok := p.ports[m.ID]; ok && m.Project != "" {
+		m.ConsoleURL = p.consoleURL(m.Project, m.ID)
+		m.RdpHost = p.publicHost
+		m.RdpPort = ports.RDP
 	}
 }
 
@@ -363,6 +401,12 @@ func (p *Provider) loadState() error {
 	}
 	if s.Ports != nil {
 		p.ports = s.Ports
+	}
+	for project, machines := range p.machines {
+		for id, m := range machines {
+			p.normalizeConsole(&m)
+			p.machines[project][id] = m
+		}
 	}
 	return nil
 }

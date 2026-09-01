@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -21,6 +23,9 @@ import (
 	"github.com/zyvorai/kryton/internal/demo"
 	"github.com/zyvorai/kryton/internal/dockur"
 	"github.com/zyvorai/kryton/internal/events"
+	"github.com/zyvorai/kryton/internal/golden"
+	"github.com/zyvorai/kryton/internal/images"
+	"github.com/zyvorai/kryton/internal/jobs"
 	"github.com/zyvorai/kryton/internal/kubeapi"
 	"github.com/zyvorai/kryton/internal/kubevirt"
 	"github.com/zyvorai/kryton/internal/metrics"
@@ -93,11 +98,32 @@ func main() {
 		os.Exit(2)
 	}
 	m := metrics.New()
+	projectRoot := findProjectRoot()
+	var goldenMgr *golden.Manager
+	if projectRoot != "" {
+		goldenMgr, _ = golden.New(golden.Config{
+			BaseDir:    cfg.GoldenDir,
+			ScriptPath: filepath.Join(projectRoot, "scripts", "build-golden-image.sh"),
+			OEMDir:     filepath.Join(projectRoot, "deploy", "dockur", "oem"),
+			PublicHost: firstNonEmpty(cfg.Dockur.PublicHost, "127.0.0.1"),
+			Resolver:   cat,
+		})
+	}
 	h := api.New(api.Config{
 		Provider: p, Catalog: cat, Events: bus, Auth: authn, Metrics: m, Web: web,
 		Projects: cfg.Projects, DefaultProject: cfg.DefaultProject, AuthMode: cfg.AuthMode,
 		DockurDataDir: cfg.Dockur.DataDir, DockurRuntime: cfg.Dockur.Runtime,
-		ImageNamespace: cfg.ImageNamespace, NamespacePrefix: cfg.NamespacePrefix, KubeClient: kubeClient, Log: log,
+		ImageNamespace: cfg.ImageNamespace, NamespacePrefix: cfg.NamespacePrefix,
+		KubeClient: kubeClient, Golden: goldenMgr,
+		Jobs: &jobs.Service{
+			Provider: p, Golden: goldenMgr, Projects: cfg.Projects,
+			DockurData: cfg.Dockur.DataDir, DockurRun: cfg.Dockur.Runtime,
+		},
+		Inventory: &images.Inventory{
+			Provider: p.Name(), ImageNS: cfg.ImageNamespace, KubeClient: kubeClient,
+			Golden: goldenMgr, ProjectRoot: projectRoot,
+		},
+		Log: log,
 	}).Handler()
 	server := &http.Server{Addr: cfg.Addr, Handler: h, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 0, IdleTimeout: 120 * time.Second, MaxHeaderBytes: 1 << 20}
 
@@ -144,4 +170,36 @@ func main() {
 		_ = server.Close()
 	}
 	log.Info("Kryton stopped")
+}
+
+func findProjectRoot() string {
+	if v := os.Getenv("KRYTON_PROJECT_ROOT"); v != "" {
+		if _, err := os.Stat(filepath.Join(v, "scripts", "build-golden-image.sh")); err == nil {
+			return filepath.Clean(v)
+		}
+	}
+	var candidates []string
+	if cwd, err := os.Getwd(); err == nil {
+		candidates = append(candidates, cwd)
+	}
+	if exe, err := os.Executable(); err == nil {
+		dir := filepath.Dir(exe)
+		candidates = append(candidates, dir, filepath.Join(dir, ".."), filepath.Join(dir, "..", ".."))
+	}
+	for _, c := range candidates {
+		c = filepath.Clean(c)
+		if _, err := os.Stat(filepath.Join(c, "scripts", "build-golden-image.sh")); err == nil {
+			return c
+		}
+	}
+	return ""
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
 }

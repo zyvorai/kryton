@@ -10,6 +10,27 @@ Provision **Windows 11** (and other catalog images) on Kubernetes via KubeVirt. 
 - `kubectl`, `virtctl`, and `qemu-img` on the operator host
 - A **sysprepped Windows qcow2** golden image (operator-provided; Kryton does not ship media)
 
+Build one with the WinForge-style pipeline — see **[GOLDEN-IMAGES.md](GOLDEN-IMAGES.md)**.
+
+---
+
+## Golden images (WinForge pipeline)
+
+```bash
+# 1. Build (dockur → Sysprep → capture)
+VERSION=11e ./scripts/build-golden-image.sh
+# ... Sysprep in guest ...
+VERSION=11e FINALIZE=1 ./scripts/build-golden-image.sh
+
+# 2. Bootstrap CDI DataSource
+KRYTON_WINDOWS_IMAGE=./out/windows-11e-golden.qcow2 ./scripts/bootstrap-kubevirt-images.sh
+
+# Or HTTP import if published to object storage:
+KRYTON_IMAGE_URL=https://artifacts.example/win11.qcow2 ./scripts/bootstrap-kubevirt-images.sh --http
+```
+
+Full details: [GOLDEN-IMAGES.md](GOLDEN-IMAGES.md).
+
 ---
 
 ## Automated setup (recommended)
@@ -49,7 +70,11 @@ Uses `deploy/helm/kryton/values-lab.yaml` (auth disabled, NodePort **30088**).
 If you only need CDI DataSources:
 
 ```bash
+# Local upload
 KRYTON_WINDOWS_IMAGE=/path/to/windows11.qcow2 ./scripts/bootstrap-kubevirt-images.sh
+
+# HTTP import (published golden image)
+KRYTON_IMAGE_URL=https://artifacts.example/win11.qcow2 ./scripts/bootstrap-kubevirt-images.sh --http
 ```
 
 ---

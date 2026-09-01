@@ -184,7 +184,7 @@ func checkKubeVirtImages(ctx context.Context, kc *kubeapi.Client, cat *catalog.C
 		return model.DoctorFinding{
 			Check: "kubevirt-images", Status: "fail",
 			Message: fmt.Sprintf("Missing DataSources in %s: %s", imageNS, strings.Join(missing, ", ")),
-			Hint:    "Run scripts/bootstrap-kubevirt-images.sh with KRYTON_WINDOWS_IMAGE set",
+			Hint:    "Build: scripts/build-golden-image.sh — Bootstrap: scripts/bootstrap-kubevirt-images.sh (see docs/GOLDEN-IMAGES.md)",
 		}
 	}
 	return model.DoctorFinding{Check: "kubevirt-images", Status: "pass", Message: fmt.Sprintf("All %d catalog image(s) have CDI DataSources in %s", len(cat.List()), imageNS)}

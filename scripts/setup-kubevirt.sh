@@ -10,6 +10,8 @@ MODE="host"
 PORT="${KRYTON_PORT:-9088}"
 IMAGE=""
 IMAGE_ID="windows-11-enterprise"
+HTTP_URL=""
+HTTP_MODE=false
 VM_NAME="win11-k8s-01"
 SKIP_CREATE=false
 SKIP_BOOTSTRAP=false
@@ -20,11 +22,14 @@ Automated KubeVirt Windows setup for Kryton.
 
 Usage:
   KRYTON_WINDOWS_IMAGE=/path/to/win11.qcow2 $0
+  KRYTON_IMAGE_URL=https://artifacts.example/win11.qcow2 $0 --http
   $0 --image /path/to/win11.qcow2 [--helm] [--port 9088] [--skip-create]
+  $0 --http --url https://artifacts.example/win11.qcow2
 
 Modes:
   (default)   Build krytond on this host + systemd unit (uses kubeconfig)
   --helm      Deploy Kryton in-cluster via Helm (values-lab.yaml, NodePort)
+  --http      Bootstrap via CDI HTTP import (WinForge-style published image)
 
 Steps:
   1. Verify kubectl + KubeVirt + CDI
@@ -33,9 +38,16 @@ Steps:
   4. POST /api/v1/machines (windows-11-enterprise) and poll status
 
 Environment:
-  KRYTON_WINDOWS_IMAGE   Golden Windows qcow2 for bootstrap
+  KRYTON_WINDOWS_IMAGE   Golden Windows qcow2 for bootstrap (upload mode)
+  KRYTON_IMAGE_URL       HTTP(S) URL to qcow2 (--http mode)
   KRYTON_PORT            API listen port (default: 9088 host, auto-increments if busy)
   KRYTON_URL             Override API base URL for smoke test
+
+Build a golden image first (WinForge-style):
+  VERSION=11e ./scripts/build-golden-image.sh
+  # Sysprep in guest, then:
+  VERSION=11e FINALIZE=1 ./scripts/build-golden-image.sh
+  See docs/GOLDEN-IMAGES.md
 EOF
 }
 
@@ -44,6 +56,8 @@ while [ $# -gt 0 ]; do
     -h|--help) usage; exit 0 ;;
     --helm) MODE=helm; shift ;;
     --image) IMAGE="$2"; shift 2 ;;
+    --http) HTTP_MODE=true; shift ;;
+    --url) HTTP_URL="$2"; shift 2 ;;
     --port) PORT="$2"; shift 2 ;;
     --name) VM_NAME="$2"; shift 2 ;;
     --skip-create) SKIP_CREATE=true; shift ;;
@@ -77,7 +91,14 @@ if [ "${SKIP_BOOTSTRAP}" = false ]; then
   if [ -n "${IMAGE}" ]; then
     export KRYTON_WINDOWS_IMAGE="${IMAGE}"
   fi
-  "${SCRIPT_DIR}/bootstrap-kubevirt-images.sh" --id "${IMAGE_ID}"
+  if [ -n "${HTTP_URL}" ]; then
+    export KRYTON_IMAGE_URL="${HTTP_URL}"
+  fi
+  BOOT_ARGS=(--id "${IMAGE_ID}")
+  if [ "${HTTP_MODE}" = true ] || [ -n "${HTTP_URL}" ]; then
+    BOOT_ARGS+=(--http)
+  fi
+  "${SCRIPT_DIR}/bootstrap-kubevirt-images.sh" "${BOOT_ARGS[@]}"
 fi
 
 API_URL=""

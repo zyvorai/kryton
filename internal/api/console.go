@@ -3,6 +3,8 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"strings"
 
 	"github.com/zyvorai/kryton/internal/auth"
@@ -23,6 +25,10 @@ func (s *Server) machineConsole(w http.ResponseWriter, r *http.Request) {
 	target, err := resolver.ConsoleTarget(r.Context(), project, machineID)
 	if err != nil {
 		s.writeErr(w, r, err)
+		return
+	}
+	if target.Kind == "web" {
+		s.proxyWebConsole(w, r, target.UpstreamURL, machineID)
 		return
 	}
 	if strings.Contains(r.Header.Get("Accept"), "text/html") || r.URL.Query().Get("format") == "html" {
@@ -60,6 +66,34 @@ func (s *Server) machineVNC(w http.ResponseWriter, r *http.Request) {
 	if err := s.kubeClient.ProxyVNC(w, r, target.Namespace, target.Name); err != nil && s.log != nil {
 		s.log.Warn("vnc proxy closed", "error", err)
 	}
+}
+
+func (s *Server) proxyWebConsole(w http.ResponseWriter, r *http.Request, upstream, machineID string) {
+	target, err := url.Parse(strings.TrimRight(upstream, "/"))
+	if err != nil || target.Host == "" {
+		s.writeAPIError(w, r, http.StatusBadGateway, "CONSOLE_UNAVAILABLE", "invalid dockur console upstream")
+		return
+	}
+	prefix := "/api/v1/machines/" + machineID + "/console"
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	origDirector := proxy.Director
+	proxy.Director = func(req *http.Request) {
+		origDirector(req)
+		suffix := strings.TrimPrefix(req.URL.Path, prefix)
+		if suffix == "" {
+			suffix = "/"
+		}
+		req.URL.Path = suffix
+		req.URL.RawPath = ""
+		req.Host = target.Host
+	}
+	proxy.ErrorHandler = func(rw http.ResponseWriter, req *http.Request, err error) {
+		if s.log != nil {
+			s.log.Warn("dockur console proxy error", "machine", machineID, "error", err)
+		}
+		http.Error(rw, "Console proxy unavailable", http.StatusBadGateway)
+	}
+	proxy.ServeHTTP(w, r)
 }
 
 const consoleHTML = `<!doctype html>

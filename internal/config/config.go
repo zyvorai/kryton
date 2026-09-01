@@ -28,6 +28,7 @@ type Config struct {
 	EventWebhookURL    string
 	EventWebhookSecret string
 	EventsFile         string
+	GoldenDir          string
 	ReconcileInterval  time.Duration
 	ShutdownTimeout    time.Duration
 	Kubernetes         Kubernetes
@@ -77,6 +78,7 @@ func Load() (Config, error) {
 		EventWebhookURL:    os.Getenv("KRYTON_EVENT_WEBHOOK_URL"),
 		EventWebhookSecret: os.Getenv("KRYTON_EVENT_WEBHOOK_SECRET"),
 		EventsFile:         os.Getenv("KRYTON_EVENTS_FILE"),
+		GoldenDir:          getenv("KRYTON_GOLDEN_DIR", ""),
 		ReconcileInterval:  durationEnv("KRYTON_RECONCILE_INTERVAL", 30*time.Second),
 		ShutdownTimeout:    durationEnv("KRYTON_SHUTDOWN_TIMEOUT", 15*time.Second),
 		Kubernetes: Kubernetes{
