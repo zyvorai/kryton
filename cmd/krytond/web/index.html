@@ -35,21 +35,20 @@
       <a class="brand-link" href="https://zyvor.dev" target="_blank" rel="noopener noreferrer" title="Zyvor">
         <img class="brand-logo" src="/zyvor-mark.svg" alt="Zyvor" width="28" height="28">
         <div class="brand-copy"><strong>Kryton</strong><span>by Zyvor</span></div>
-        <span class="sidebar-tip"><strong>Kryton</strong><span>by Zyvor</span></span>
       </a>
-      <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Expand sidebar"><svg class="sf-icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><use href="#icon-chevron-left"/></svg></button>
+      <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-controls="primary-nav" aria-expanded="true" aria-label="Collapse sidebar"><svg class="sf-icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><use href="#icon-chevron-left"/></svg></button>
     </div>
     <nav class="nav" id="primary-nav" aria-label="Primary">
-      <button data-view="overview" class="active" title="Overview"><span class="nav-icon"><svg class="sf-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><use href="#icon-overview"/></svg></span><span class="nav-label">Overview</span></button>
-      <button data-view="machines" title="Machines"><span class="nav-icon"><svg class="sf-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><use href="#icon-machines"/></svg></span><span class="nav-label">Machines</span></button>
-      <button data-view="images" title="Images"><span class="nav-icon"><svg class="sf-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><use href="#icon-images"/></svg></span><span class="nav-label">Images</span></button>
-      <button data-view="jobs" title="Jobs"><span class="nav-icon"><svg class="sf-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><use href="#icon-jobs"/></svg></span><span class="nav-label">Jobs</span><span class="nav-badge" id="jobsNavBadge" hidden>0</span></button>
-      <button data-view="activity" title="Activity"><span class="nav-icon"><svg class="sf-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><use href="#icon-activity"/></svg></span><span class="nav-label">Activity</span></button>
-      <button data-view="settings" title="Settings"><span class="nav-icon"><svg class="sf-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><use href="#icon-settings"/></svg></span><span class="nav-label">Settings</span></button>
+      <button data-view="overview" class="active"><span class="nav-label">Overview</span><span class="nav-icon"><svg class="sf-icon" viewBox="0 0 20 20" width="40" height="40" aria-hidden="true"><use href="#icon-overview"/></svg></span></button>
+      <button data-view="machines"><span class="nav-label">Machines</span><span class="nav-icon"><svg class="sf-icon" viewBox="0 0 20 20" width="40" height="40" aria-hidden="true"><use href="#icon-machines"/></svg></span></button>
+      <button data-view="images"><span class="nav-label">Images</span><span class="nav-icon"><svg class="sf-icon" viewBox="0 0 20 20" width="40" height="40" aria-hidden="true"><use href="#icon-images"/></svg></span></button>
+      <button data-view="jobs"><span class="nav-label">Jobs</span><span class="nav-icon"><svg class="sf-icon" viewBox="0 0 20 20" width="40" height="40" aria-hidden="true"><use href="#icon-jobs"/></svg></span><span class="nav-badge" id="jobsNavBadge" hidden>0</span></button>
+      <button data-view="activity"><span class="nav-label">Activity</span><span class="nav-icon"><svg class="sf-icon" viewBox="0 0 20 20" width="40" height="40" aria-hidden="true"><use href="#icon-activity"/></svg></span></button>
+      <button data-view="settings"><span class="nav-label">Settings</span><span class="nav-icon"><svg class="sf-icon" viewBox="0 0 20 20" width="40" height="40" aria-hidden="true"><use href="#icon-settings"/></svg></span></button>
     </nav>
     <div class="side-footer">
-      <button class="side-create" data-create type="button" title="New machine"><span class="create-icon"><svg class="sf-icon" viewBox="0 0 20 20" width="13" height="13" aria-hidden="true"><use href="#icon-plus"/></svg></span><span class="side-create-label">New machine</span></button>
-      <div class="side-status" title="Control plane"><span class="live-dot"></span><div class="side-status-copy"><strong>Control plane</strong><span id="providerSide">Connecting…</span></div><span class="side-status-tip"><strong>Control plane</strong><span id="providerSideTip">Connecting…</span></span></div>
+      <button class="side-create" data-create type="button"><span class="create-icon"><svg class="sf-icon" viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><use href="#icon-plus"/></svg></span><span>New machine</span></button>
+      <div class="side-status"><span class="live-dot"></span><div><strong>Control plane</strong><span id="providerSide">Connecting…</span></div></div>
     </div>
   </aside>
 
@@ -64,7 +63,7 @@
     </div>
 
     <section id="view-overview" class="view active">
-      <header class="page-header"><div><p class="eyebrow">WINDOWS VIRTUALIZATION</p><h1>Beautifully<br><span>simple.</span></h1><p class="lead">One clean API for Windows workloads. Provider details stay underneath; operations stay simple.</p></div><button class="primary large" data-create><svg class="sf-icon sf-icon-inline" viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><use href="#icon-plus"/></svg> Create machine</button></header>
+      <header class="page-header"><div><p class="eyebrow">WINDOWS VIRTUALIZATION</p><h1>Beautifully<br><span>simple.</span></h1><p class="lead">One clean API for Windows workloads. Provider details stay underneath; operations stay simple.</p></div><div class="create-hero-stack"><button class="create-hero-fab" data-create type="button" aria-label="Create machine"><svg class="sf-icon" viewBox="0 0 20 20" width="26" height="26" aria-hidden="true"><use href="#icon-plus"/></svg></button><span class="create-hero-caption">Create machine</span></div></header>
       <div id="doctorBanner" class="doctor-banner-wrap"></div>
       <div id="overviewJobs" class="overview-jobs-wrap"></div>
       <section class="hero-card">
