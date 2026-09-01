@@ -102,6 +102,36 @@ paths:
           schema: {type: string}
       responses:
         '201': {description: Snapshot requested}
+  /api/v1/golden:
+    get:
+      responses:
+        '200': {description: Golden image builds}
+    post:
+      responses:
+        '202': {description: Golden image build started}
+  /api/v1/golden/{id}:
+    get:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string}
+      responses:
+        '200': {description: Golden image build}
+  /api/v1/golden/{id}/bootstrap:
+    post:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string}
+      responses:
+        '202': {description: CDI DataSource bootstrap started}
+        '400': {description: Build is not ready}
+  /api/v1/jobs:
+    get:
+      responses:
+        '200': {description: Machine and golden jobs}
   /api/v1/events:
     get:
       responses:

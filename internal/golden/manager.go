@@ -19,22 +19,27 @@ type VersionResolver interface {
 }
 
 type Manager struct {
-	mu          sync.Mutex
-	running     map[string]struct{}
-	baseDir     string
-	scriptPath  string
-	oemDir      string
-	publicHost  string
-	versionMap  map[string]string
-	resolver    VersionResolver
+	mu               sync.Mutex
+	running          map[string]struct{}
+	bootstrapping    map[string]struct{}
+	baseDir          string
+	scriptPath       string
+	bootstrapPath    string
+	oemDir           string
+	publicHost       string
+	imageNamespace   string
+	versionMap       map[string]string
+	resolver         VersionResolver
 }
 
 type Config struct {
-	BaseDir    string
-	ScriptPath string
-	OEMDir     string
-	PublicHost string
-	Resolver   VersionResolver
+	BaseDir          string
+	ScriptPath       string
+	BootstrapPath    string
+	OEMDir           string
+	PublicHost       string
+	ImageNamespace   string
+	Resolver         VersionResolver
 }
 
 func New(cfg Config) (*Manager, error) {
@@ -53,16 +58,30 @@ func New(cfg Config) (*Manager, error) {
 	if host == "" {
 		host = "127.0.0.1"
 	}
+	ns := strings.TrimSpace(cfg.ImageNamespace)
+	if ns == "" {
+		ns = "kryton-images"
+	}
 	return &Manager{
-		running:    map[string]struct{}{},
-		baseDir:    base,
-		scriptPath: cfg.ScriptPath,
-		oemDir:     cfg.OEMDir,
-		publicHost: host,
-		resolver:   cfg.Resolver,
-		versionMap: defaultVersions(),
+		running:        map[string]struct{}{},
+		bootstrapping:  map[string]struct{}{},
+		baseDir:        base,
+		scriptPath:     cfg.ScriptPath,
+		bootstrapPath:  cfg.BootstrapPath,
+		oemDir:         cfg.OEMDir,
+		publicHost:     host,
+		imageNamespace: ns,
+		resolver:       cfg.Resolver,
+		versionMap:     defaultVersions(),
 	}, nil
 }
+
+var (
+	ErrNotFound          = fmt.Errorf("golden build not found")
+	ErrNotReady          = fmt.Errorf("golden image is not ready to publish")
+	ErrBootstrapRunning  = fmt.Errorf("CDI bootstrap already running for this build")
+	ErrBootstrapDisabled = fmt.Errorf("CDI bootstrap script is not configured")
+)
 
 func defaultVersions() map[string]string {
 	return map[string]string{
@@ -116,9 +135,54 @@ func (m *Manager) List() ([]model.GoldenBuild, error) {
 func (m *Manager) Get(id string) (*model.GoldenBuild, error) {
 	b, err := m.readStatus(filepath.Join(m.baseDir, id, "status.json"))
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 	return &b, nil
+}
+
+func (m *Manager) Bootstrap(id string) (*model.GoldenBuild, error) {
+	if strings.TrimSpace(m.bootstrapPath) == "" {
+		return nil, ErrBootstrapDisabled
+	}
+	if _, err := os.Stat(m.bootstrapPath); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrBootstrapDisabled, err)
+	}
+	b, err := m.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if b.State != model.GoldenReady {
+		return nil, ErrNotReady
+	}
+	out := strings.TrimSpace(b.OutputPath)
+	if out == "" {
+		return nil, ErrNotReady
+	}
+	if _, err := os.Stat(out); err != nil {
+		return nil, fmt.Errorf("golden artifact missing: %w", err)
+	}
+	m.mu.Lock()
+	if _, ok := m.bootstrapping[id]; ok {
+		m.mu.Unlock()
+		return nil, ErrBootstrapRunning
+	}
+	m.bootstrapping[id] = struct{}{}
+	m.mu.Unlock()
+
+	b.BootstrapState = "running"
+	b.BootstrapMessage = "Publishing qcow2 to CDI DataSource " + m.imageNamespace + "/" + b.ImageID
+	workdir := filepath.Join(m.baseDir, id)
+	if err := m.writeStatus(workdir, *b); err != nil {
+		m.mu.Lock()
+		delete(m.bootstrapping, id)
+		m.mu.Unlock()
+		return nil, err
+	}
+	go m.runBootstrap(id, b.ImageID, out, workdir)
+	return m.Get(id)
 }
 
 func (m *Manager) Start(ctx context.Context, req model.GoldenStartRequest) (*model.GoldenBuild, error) {
@@ -213,6 +277,38 @@ func (m *Manager) runBuild(id, version, imageID, workdir string, auto bool) {
 			_ = m.writeStatus(workdir, *b)
 		}
 	}
+}
+
+func (m *Manager) runBootstrap(id, imageID, artifact, workdir string) {
+	defer func() {
+		m.mu.Lock()
+		delete(m.bootstrapping, id)
+		m.mu.Unlock()
+	}()
+	cmd := exec.Command(m.bootstrapPath, "--image", artifact, "--id", imageID)
+	cmd.Env = append(os.Environ(), "KRYTON_IMAGE_NAMESPACE="+m.imageNamespace, "KRYTON_IMAGE_ID="+imageID, "KRYTON_WINDOWS_IMAGE="+artifact)
+	out, err := cmd.CombinedOutput()
+	b, _ := m.Get(id)
+	if b == nil {
+		return
+	}
+	if err != nil {
+		b.BootstrapState = "failed"
+		b.BootstrapMessage = strings.TrimSpace(string(out))
+		if b.BootstrapMessage == "" {
+			b.BootstrapMessage = err.Error()
+		}
+	} else {
+		b.BootstrapState = "ready"
+		b.DataSource = m.imageNamespace + "/" + imageID
+		msg := strings.TrimSpace(string(out))
+		if msg == "" {
+			msg = "DataSource ready: " + b.DataSource
+		}
+		b.BootstrapMessage = msg
+	}
+	b.UpdatedAt = time.Now().UTC()
+	_ = m.writeStatus(workdir, *b)
 }
 
 func (m *Manager) readStatus(path string) (model.GoldenBuild, error) {

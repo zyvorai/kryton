@@ -23,11 +23,14 @@ type GoldenBuild struct {
 	ProgressPercent int              `json:"progressPercent"`
 	Message         string           `json:"message"`
 	ConsoleURL      string           `json:"consoleUrl,omitempty"`
-	OutputPath      string           `json:"outputPath,omitempty"`
-	SHA256          string           `json:"sha256,omitempty"`
-	StartedAt       time.Time        `json:"startedAt,omitempty"`
-	UpdatedAt       time.Time        `json:"updatedAt,omitempty"`
-	Error           string           `json:"error,omitempty"`
+	OutputPath         string           `json:"outputPath,omitempty"`
+	SHA256             string           `json:"sha256,omitempty"`
+	StartedAt          time.Time        `json:"startedAt,omitempty"`
+	UpdatedAt          time.Time        `json:"updatedAt,omitempty"`
+	Error              string           `json:"error,omitempty"`
+	BootstrapState     string           `json:"bootstrapState,omitempty"`
+	BootstrapMessage   string           `json:"bootstrapMessage,omitempty"`
+	DataSource         string           `json:"dataSource,omitempty"`
 }
 
 type GoldenStartRequest struct {

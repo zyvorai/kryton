@@ -104,6 +104,7 @@ func (s *Server) Handler() http.Handler {
 	apiMux.HandleFunc("GET /api/v1/golden", s.goldenList)
 	apiMux.HandleFunc("POST /api/v1/golden", s.goldenStart)
 	apiMux.HandleFunc("GET /api/v1/golden/{id}", s.goldenGet)
+	apiMux.HandleFunc("POST /api/v1/golden/{id}/bootstrap", s.goldenBootstrap)
 	apiMux.HandleFunc("GET /api/v1/jobs", s.listJobs)
 	apiMux.HandleFunc("GET /api/v1/jobs/{id}", s.getJob)
 	apiMux.HandleFunc("GET /api/v1/summary", s.summary)

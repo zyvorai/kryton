@@ -13,6 +13,12 @@ GET    /api/v1/projects
 GET    /api/v1/capabilities
 GET    /api/v1/doctor
 GET    /api/v1/images
+GET    /api/v1/golden
+POST   /api/v1/golden
+GET    /api/v1/golden/{id}
+POST   /api/v1/golden/{id}/bootstrap
+GET    /api/v1/jobs
+GET    /api/v1/jobs/{id}
 GET    /api/v1/summary?project=<project>
 GET    /api/v1/machines?project=<project>
 POST   /api/v1/machines

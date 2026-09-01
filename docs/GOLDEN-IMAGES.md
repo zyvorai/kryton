@@ -85,6 +85,16 @@ Override with `KRYTON_IMAGE_ID=my-custom-image`.
 
 ## 2. Bootstrap into Kubernetes (CDI)
 
+### API (from a ready golden build)
+
+On a kubevirt krytond with `kubectl`/`virtctl` and kubeconfig:
+
+```bash
+curl -X POST http://127.0.0.1:9088/api/v1/golden/<build-id>/bootstrap
+```
+
+The Images page **Publish to KubeVirt** button runs the same path: upload the captured qcow2 and create `DataSource` `<imageNamespace>/<imageId>`.
+
 ### Upload from local file
 
 ```bash

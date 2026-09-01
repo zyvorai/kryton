@@ -102,11 +102,13 @@ func main() {
 	var goldenMgr *golden.Manager
 	if projectRoot != "" {
 		goldenMgr, _ = golden.New(golden.Config{
-			BaseDir:    cfg.GoldenDir,
-			ScriptPath: filepath.Join(projectRoot, "scripts", "build-golden-image.sh"),
-			OEMDir:     filepath.Join(projectRoot, "deploy", "dockur", "oem"),
-			PublicHost: firstNonEmpty(cfg.Dockur.PublicHost, "127.0.0.1"),
-			Resolver:   cat,
+			BaseDir:        cfg.GoldenDir,
+			ScriptPath:     filepath.Join(projectRoot, "scripts", "build-golden-image.sh"),
+			BootstrapPath:  filepath.Join(projectRoot, "scripts", "bootstrap-kubevirt-images.sh"),
+			OEMDir:         filepath.Join(projectRoot, "deploy", "dockur", "oem"),
+			PublicHost:     firstNonEmpty(cfg.Dockur.PublicHost, "127.0.0.1"),
+			ImageNamespace: cfg.ImageNamespace,
+			Resolver:       cat,
 		})
 	}
 	h := api.New(api.Config{
