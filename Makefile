@@ -1,4 +1,4 @@
-.PHONY: run build test race vet fmt check demo image deploy-remote bootstrap-kubevirt setup-kubevirt build-golden enable-kubevirt-snapshots enable-rook-ceph
+.PHONY: run build test race vet fmt check demo image deploy-remote harden-lab bootstrap-kubevirt setup-kubevirt build-golden enable-kubevirt-snapshots enable-rook-ceph
 
 run:
 	go run ./cmd/krytond
@@ -32,6 +32,10 @@ image:
 deploy-remote:
 	@test -n "$(H)" || (echo "Usage: make deploy-remote H=<host> U=<user> [ARGS='--quick']"; exit 1)
 	./scripts/deploy-remote.sh $(if $(U),$(U)@)$(H) $(ARGS)
+
+harden-lab:
+	@test -n "$(H)" || (echo "Usage: make harden-lab H=<host> U=<user>"; exit 1)
+	ssh $(if $(U),$(U)@)$(H) 'bash -s' < ./scripts/harden-lab-services.sh
 
 bootstrap-kubevirt:
 	@if [ -z "$(IMAGE)" ] && [ -z "$(URL)" ]; then \

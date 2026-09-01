@@ -93,6 +93,13 @@ func (p *Provider) ConsoleTarget(ctx context.Context, project, machineID string)
 	if vmi == nil {
 		return nil, fmt.Errorf("console unavailable: guest instance is not running yet")
 	}
+	phase := strings.TrimSpace(stringAny(nestedMap(vmi, "status")["phase"]))
+	if !strings.EqualFold(phase, "Running") {
+		if phase == "" {
+			phase = "Pending"
+		}
+		return nil, fmt.Errorf("console unavailable: guest is %s — wait until Running (disk clone may still be in progress)", phase)
+	}
 	return &provider.ConsoleTarget{Namespace: m.ProviderRef.Namespace, Name: m.ProviderRef.Name, Kind: "vnc"}, nil
 }
 

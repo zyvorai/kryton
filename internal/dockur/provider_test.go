@@ -24,6 +24,10 @@ func TestResolveDefaultVersions(t *testing.T) {
 	if !ok || v != "11e" {
 		t.Fatalf("got %q %v", v, ok)
 	}
+	v, ok = p.resolveVersion("windows-tiny11")
+	if !ok || v != "tiny11" {
+		t.Fatalf("got %q %v", v, ok)
+	}
 }
 
 func TestCatalogOverridesDefault(t *testing.T) {
@@ -39,23 +43,60 @@ func TestConsoleURLAndRDP(t *testing.T) {
 		publicHost: "lab.example",
 		ports:      map[string]portPair{"m1": {HTTP: 18006, RDP: 13389}},
 	}
-	m := &model.Machine{ID: "m1", Project: "default"}
+	m := &model.Machine{ID: "m1", Project: "default", Spec: model.MachineSpec{Dockur: &model.DockurOptions{Username: "lab"}}}
 	p.normalizeConsole(m)
 	want := "/api/v1/machines/m1/console/?project=default"
 	if m.ConsoleURL != want {
 		t.Fatalf("consoleUrl = %q, want %q", m.ConsoleURL, want)
 	}
-	if m.RdpHost != "lab.example" || m.RdpPort != 13389 {
-		t.Fatalf("rdp = %s:%d", m.RdpHost, m.RdpPort)
+	if m.RdpHost != "lab.example" || m.RdpPort != 13389 || m.RdpUsername != "lab" {
+		t.Fatalf("rdp = %s:%d user=%s", m.RdpHost, m.RdpPort, m.RdpUsername)
 	}
 }
 
-func TestRenderCompose(t *testing.T) {
+func TestRenderComposeBasics(t *testing.T) {
 	spec := model.MachineSpec{Name: "win1", Image: "windows-11-enterprise", Compute: model.ComputeSpec{CPU: 4, MemoryMiB: 8192}, Disk: model.DiskSpec{SizeGiB: 64}}
-	out := renderCompose(spec, "11e", portPair{HTTP: 18006, RDP: 13389})
-	for _, want := range []string{`VERSION: "11e"`, `RAM_SIZE: "8G"`, `CPU_CORES: "4"`, `DISK_SIZE: "64G"`, `18006:8006`, `13389:3389`} {
+	out := renderCompose(applyDockurDefaults(spec), "11e", portPair{HTTP: 18006, RDP: 13389})
+	for _, want := range []string{`VERSION: "11e"`, `RAM_SIZE: "8G"`, `CPU_CORES: "4"`, `DISK_SIZE: "64G"`, `USERNAME: "Docker"`, `PASSWORD: "admin"`, `HOST: "win1"`, `18006:8006`, `13389:3389`} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("compose missing %q\n%s", want, out)
 		}
+	}
+}
+
+func TestRenderComposeRichOptions(t *testing.T) {
+	auto := false
+	spec := model.MachineSpec{
+		Name: "lab", Image: "windows-11-pro",
+		Compute: model.ComputeSpec{CPU: 2, MemoryMiB: 4096}, Disk: model.DiskSpec{SizeGiB: 40},
+		Dockur: &model.DockurOptions{
+			Username: "bill", Password: "gates", Language: "French", Region: "fr-FR", Keyboard: "fr-FR",
+			ProductKey: "AAAAA-BBBBB-CCCCC-DDDDD-EEEEE", Domain: "example.com", DomainOU: "OU=Labs,DC=example,DC=com",
+			Autologin: &auto, Audio: true, SecureBoot: true,
+			SharedDir: "/tmp/shared", OemDir: "/tmp/oem", Command: "echo hi",
+			ExtraDisksGiB: []int{32, 64}, Edition: "core",
+		},
+	}
+	out := renderCompose(applyDockurDefaults(spec), "11", portPair{HTTP: 18007, RDP: 13390})
+	for _, want := range []string{
+		`USERNAME: "bill"`, `PASSWORD: "gates"`, `LANGUAGE: "French"`, `AUDIO: "Y"`,
+		`BOOT_MODE: "windows_secure"`, `TPM: "Y"`, `AUTOLOGIN: "N"`,
+		`DISK2_SIZE: "32G"`, `DISK3_SIZE: "64G"`, `./storage2:/storage2`,
+		`"/tmp/shared:/shared"`, `"/tmp/oem:/oem"`, `DOMAIN: "example.com"`, `EDITION: "core"`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("compose missing %q\n%s", want, out)
+		}
+	}
+}
+
+func TestCloneRedactsPassword(t *testing.T) {
+	m := model.Machine{Spec: model.MachineSpec{Dockur: &model.DockurOptions{Username: "u", Password: "secret"}}}
+	c := clone(m)
+	if c.Spec.Dockur.Password != "" {
+		t.Fatal("password should be redacted")
+	}
+	if m.Spec.Dockur.Password != "secret" {
+		t.Fatal("original password mutated")
 	}
 }

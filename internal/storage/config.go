@@ -173,11 +173,27 @@ func LoadInventory(ctx context.Context, kc *kubeapi.Client, current Config, prov
 	}
 	sort.Slice(out.StorageClasses, func(i, j int) bool {
 		a, b := out.StorageClasses[i], out.StorageClasses[j]
-		if a.Recommended != b.Recommended {
-			return a.Recommended
+		rank := func(c Class) int {
+			switch {
+			case c.Backend == "rook-ceph" && c.SnapshotCapable:
+				return 0
+			case c.Backend == "rook-ceph":
+				return 1
+			case c.Backend == "longhorn" && c.SnapshotCapable:
+				return 2
+			case c.Recommended:
+				return 3
+			case c.SnapshotCapable:
+				return 4
+			case c.Backend == "local-path":
+				return 9
+			default:
+				return 5
+			}
 		}
-		if a.SnapshotCapable != b.SnapshotCapable {
-			return a.SnapshotCapable
+		ra, rb := rank(a), rank(b)
+		if ra != rb {
+			return ra < rb
 		}
 		return a.Name < b.Name
 	})

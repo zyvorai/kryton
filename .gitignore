@@ -18,3 +18,5 @@ coverage.out
 
 # Go
 vendor/
+node_modules/
+package-lock.json

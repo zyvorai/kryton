@@ -1,19 +1,28 @@
 # Kryton release notes
 
-## Unreleased
+## 1.1.0
 
 ### Added
 
-- **Dockur lab provider** — provision real Windows guests via [dockur/windows](https://github.com/dockur/windows) (Docker/Podman + KVM). Image catalog maps Kryton image IDs to dockur `VERSION` codes.
-- **Doctor diagnostics** — `krytonctl doctor` and `GET /api/v1/doctor` validate auth, projects, catalog, provider health, container runtime, compose, KVM, and data-dir writability.
-- **Install progress** — machine responses include `consoleUrl`, `progressPercent`, and `message` for dockur and demo providers.
-- **Install events** — `io.kryton.machine.install.started` emitted when dockur unattended setup begins.
-- **Remote deploy** — `scripts/deploy-remote.sh` (GuestKit-style SSH + rsync + systemd) and `make deploy-remote`.
-- **UI polish** — Apple-inspired typography, collapsible sidebar, refined light/dark palette.
+- **Dockur options (full)** — `spec.dockur` on create: credentials, locale, AD join, shared/OEM folders, post-install command, custom ISO, edition, audio, secure boot + TPM, extra disks, autologin.
+- **`rdpUsername`** on machine responses; password redacted on GET.
+- **Expanded catalog** — Windows 10/11 LTSC, Tiny11, Server 2016, Enterprise variants (12 dockur images).
+- **UI** — Dockur create panel, detail **Dockur options** summary, Copy RDP, embedded noVNC console (no CDN dependency).
+- **CLI** — `krytonctl create … --dockur-*` flags for all dockur fields.
+- **Lab hardening** — `scripts/ensure-api-keys.sh`, `scripts/harden-lab-services.sh` (apikey auth on shared lab hosts).
+- **Customer profile** — `deploy/helm/kryton/values-customer.yaml`, [docs/CUSTOMER.md](docs/CUSTOMER.md).
+
+### Fixed
+
+- KubeVirt console iframe blocked by CSP / `X-Frame-Options`.
+- VNC proxy 500 (missing `Hijacker` on response writer).
+- Storage picker hang (`lsblk` timeout); Rook Ceph preferred in UI sort order.
+- Actionable API errors with hints on create failures.
 
 ### Docs
 
-- New guides: [DOCKUR.md](docs/DOCKUR.md), expanded [DEPLOY-REMOTE.md](docs/DEPLOY-REMOTE.md), [API.md](docs/API.md), [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+- [DOCKUR.md](docs/DOCKUR.md) — full option matrix, CLI examples, auth guidance.
+- OpenAPI `DockurOptions` schema on `CreateMachine`.
 
 ---
 
@@ -30,5 +39,9 @@ Initial public release of Kryton as a production-oriented standalone control pla
 - Added CloudEvents-compatible history, SSE streaming, webhooks, TTL reconciliation, structured logging, metrics, readiness, and graceful shutdown.
 - Added a complete responsive product dashboard with Overview, Machines, Images, Activity, Settings, machine detail actions, dark/light appearance, and session-token support.
 - Added Helm RBAC, hardened container settings, OpenAPI, CLI, architecture/deployment docs, race tests, and provider integration tests.
+- **Dockur lab provider** — provision real Windows guests via [dockur/windows](https://github.com/dockur/windows).
+- **Doctor diagnostics** — `krytonctl doctor` and `GET /api/v1/doctor`.
+- **Install progress** — `consoleUrl`, `progressPercent`, `message` on machines.
+- **Remote deploy** — `scripts/deploy-remote.sh` and `make deploy-remote`.
 
 The release source is Apache-2.0 licensed and contains no Windows media or activation material.

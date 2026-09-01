@@ -24,11 +24,17 @@ import (
 // VERSION map aligned with dockur/windows FAQ codes.
 var defaultVersions = map[string]string{
 	"windows-11-enterprise": "11e",
+	"windows-11-pro":        "11",
+	"windows-11-ltsc":       "11l",
+	"windows-10-enterprise": "10e",
+	"windows-10-pro":        "10",
+	"windows-10-ltsc":       "10l",
+	"windows-tiny11":        "tiny11",
+	"windows-tiny11-core":   "core11",
 	"windows-server-2025":   "2025",
 	"windows-server-2022":   "2022",
-	"windows-11-pro":        "11",
-	"windows-10-pro":        "10",
 	"windows-server-2019":   "2019",
+	"windows-server-2016":   "2016",
 }
 
 type Config struct {
@@ -161,6 +167,10 @@ func (p *Provider) Create(ctx context.Context, project string, spec model.Machin
 	if err := os.MkdirAll(filepath.Join(dir, "storage"), 0o755); err != nil {
 		return nil, err
 	}
+	spec = applyDockurDefaults(spec)
+	if err := prepareDockurDirs(dir, spec.Dockur); err != nil {
+		return nil, err
+	}
 	compose := renderCompose(spec, version, ports)
 	if err := os.WriteFile(filepath.Join(dir, "compose.yml"), []byte(compose), 0o644); err != nil {
 		return nil, err
@@ -176,6 +186,7 @@ func (p *Provider) Create(ctx context.Context, project string, spec model.Machin
 		ID: machineID, Project: project, Provider: p.Name(), State: model.StateProvisioning, Spec: spec,
 		ProviderRef:     model.ProviderRef{Provider: p.Name(), Namespace: project, Name: spec.Name},
 		ConsoleURL:      p.consoleURL(project, machineID),
+		RdpUsername:     dockurUsername(spec),
 		ProgressPercent: &progress,
 		Message:         "Windows image download / unattended install in progress (dockur web viewer)",
 		CreatedAt:       now, UpdatedAt: now,
@@ -376,6 +387,167 @@ func (p *Provider) normalizeConsole(m *model.Machine) {
 		m.RdpHost = p.publicHost
 		m.RdpPort = ports.RDP
 	}
+	if m.RdpUsername == "" {
+		m.RdpUsername = dockurUsername(m.Spec)
+	}
+}
+
+func applyDockurDefaults(spec model.MachineSpec) model.MachineSpec {
+	d := spec.Dockur
+	if d == nil {
+		d = &model.DockurOptions{}
+	}
+	cp := *d
+	if strings.TrimSpace(cp.Username) == "" {
+		cp.Username = "Docker"
+	}
+	if strings.TrimSpace(cp.Password) == "" {
+		cp.Password = "admin"
+	}
+	if strings.TrimSpace(cp.Hostname) == "" {
+		cp.Hostname = spec.Name
+	}
+	spec.Dockur = &cp
+	return spec
+}
+
+func dockurUsername(spec model.MachineSpec) string {
+	if spec.Dockur != nil && strings.TrimSpace(spec.Dockur.Username) != "" {
+		return spec.Dockur.Username
+	}
+	return "Docker"
+}
+
+func prepareDockurDirs(machineDir string, d *model.DockurOptions) error {
+	if d == nil {
+		return nil
+	}
+	for i := range d.ExtraDisksGiB {
+		path := filepath.Join(machineDir, fmt.Sprintf("storage%d", i+2))
+		if err := os.MkdirAll(path, 0o755); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func yamlQuote(v string) string {
+	b, _ := json.Marshal(v)
+	return string(b)
+}
+
+func renderCompose(spec model.MachineSpec, version string, ports portPair) string {
+	ramG := spec.Compute.MemoryMiB / 1024
+	if ramG < 1 {
+		ramG = 1
+	}
+	disk := strconv.Itoa(spec.Disk.SizeGiB) + "G"
+	d := spec.Dockur
+	if d == nil {
+		d = &model.DockurOptions{Username: "Docker", Password: "admin", Hostname: spec.Name}
+	}
+
+	ver := version
+	if u := strings.TrimSpace(d.CustomISO); u != "" && (strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://")) {
+		ver = u
+	}
+
+	var env []string
+	add := func(k, v string) {
+		v = strings.TrimSpace(v)
+		if v == "" {
+			return
+		}
+		env = append(env, fmt.Sprintf("      %s: %s", k, yamlQuote(v)))
+	}
+	add("VERSION", ver)
+	add("RAM_SIZE", fmt.Sprintf("%dG", ramG))
+	add("CPU_CORES", strconv.Itoa(spec.Compute.CPU))
+	add("DISK_SIZE", disk)
+	add("USERNAME", d.Username)
+	add("PASSWORD", d.Password)
+	add("HOST", d.Hostname)
+	add("LANGUAGE", d.Language)
+	add("REGION", d.Region)
+	add("KEYBOARD", d.Keyboard)
+	add("KEY", d.ProductKey)
+	add("DOMAIN", d.Domain)
+	add("DOMAIN_OU", d.DomainOU)
+	add("EDITION", d.Edition)
+	add("COMMAND", d.Command)
+	if d.Audio {
+		add("AUDIO", "Y")
+	}
+	if d.SecureBoot {
+		add("BOOT_MODE", "windows_secure")
+		add("TPM", "Y")
+	}
+	if d.Autologin != nil && !*d.Autologin {
+		add("AUTOLOGIN", "N")
+	}
+	for i, g := range d.ExtraDisksGiB {
+		add(fmt.Sprintf("DISK%d_SIZE", i+2), strconv.Itoa(g)+"G")
+	}
+
+	var vols []string
+	vols = append(vols, "      - ./storage:/storage")
+	if share := strings.TrimSpace(d.SharedDir); share != "" {
+		vols = append(vols, fmt.Sprintf("      - %s", yamlQuote(share+":/shared")))
+	}
+	if oem := strings.TrimSpace(d.OemDir); oem != "" {
+		vols = append(vols, fmt.Sprintf("      - %s", yamlQuote(oem+":/oem")))
+	}
+	if iso := strings.TrimSpace(d.CustomISO); iso != "" && !strings.HasPrefix(iso, "http://") && !strings.HasPrefix(iso, "https://") {
+		vols = append(vols, fmt.Sprintf("      - %s", yamlQuote(iso+":/custom.iso")))
+	}
+	for i := range d.ExtraDisksGiB {
+		vols = append(vols, fmt.Sprintf("      - ./storage%d:/storage%d", i+2, i+2))
+	}
+
+	return fmt.Sprintf(`services:
+  windows:
+    image: docker.io/dockurr/windows
+    environment:
+%s
+    devices:
+      - /dev/kvm
+      - /dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "%d:8006"
+      - "%d:3389/tcp"
+      - "%d:3389/udp"
+    volumes:
+%s
+    restart: unless-stopped
+    stop_grace_period: 2m
+`, strings.Join(env, "\n"), ports.HTTP, ports.RDP, ports.RDP, strings.Join(vols, "\n"))
+}
+
+func clone(m model.Machine) *model.Machine {
+	c := m
+	c.IPAddresses = append([]string(nil), m.IPAddresses...)
+	c.Conditions = append([]model.Condition(nil), m.Conditions...)
+	if m.ProgressPercent != nil {
+		v := *m.ProgressPercent
+		c.ProgressPercent = &v
+	}
+	if m.Spec.Labels != nil {
+		c.Spec.Labels = map[string]string{}
+		for k, v := range m.Spec.Labels {
+			c.Spec.Labels[k] = v
+		}
+	}
+	if m.Spec.Dockur != nil {
+		d := *m.Spec.Dockur
+		d.Password = "" // never return guest password over the API
+		if len(m.Spec.Dockur.ExtraDisksGiB) > 0 {
+			d.ExtraDisksGiB = append([]int(nil), m.Spec.Dockur.ExtraDisksGiB...)
+		}
+		c.Spec.Dockur = &d
+	}
+	return &c
 }
 
 type persisted struct {
@@ -390,7 +562,7 @@ func (p *Provider) saveStateLocked() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(p.statePath(), b, 0o644)
+	return os.WriteFile(p.statePath(), b, 0o600)
 }
 
 func (p *Provider) loadState() error {
@@ -418,51 +590,4 @@ func (p *Provider) loadState() error {
 		}
 	}
 	return nil
-}
-
-func renderCompose(spec model.MachineSpec, version string, ports portPair) string {
-	ramG := spec.Compute.MemoryMiB / 1024
-	if ramG < 1 {
-		ramG = 1
-	}
-	disk := strconv.Itoa(spec.Disk.SizeGiB) + "G"
-	return fmt.Sprintf(`services:
-  windows:
-    image: docker.io/dockurr/windows
-    environment:
-      VERSION: %q
-      RAM_SIZE: %q
-      CPU_CORES: %q
-      DISK_SIZE: %q
-    devices:
-      - /dev/kvm
-      - /dev/net/tun
-    cap_add:
-      - NET_ADMIN
-    ports:
-      - "%d:8006"
-      - "%d:3389/tcp"
-      - "%d:3389/udp"
-    volumes:
-      - ./storage:/storage
-    restart: unless-stopped
-    stop_grace_period: 2m
-`, version, fmt.Sprintf("%dG", ramG), strconv.Itoa(spec.Compute.CPU), disk, ports.HTTP, ports.RDP, ports.RDP)
-}
-
-func clone(m model.Machine) *model.Machine {
-	c := m
-	c.IPAddresses = append([]string(nil), m.IPAddresses...)
-	c.Conditions = append([]model.Condition(nil), m.Conditions...)
-	if m.ProgressPercent != nil {
-		v := *m.ProgressPercent
-		c.ProgressPercent = &v
-	}
-	if m.Spec.Labels != nil {
-		c.Spec.Labels = map[string]string{}
-		for k, v := range m.Spec.Labels {
-			c.Spec.Labels[k] = v
-		}
-	}
-	return &c
 }

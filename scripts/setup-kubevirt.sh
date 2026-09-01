@@ -15,6 +15,7 @@ HTTP_MODE=false
 VM_NAME="win11-k8s-01"
 SKIP_CREATE=false
 SKIP_BOOTSTRAP=false
+INSECURE=false
 
 usage() {
   cat <<EOF
@@ -62,6 +63,7 @@ while [ $# -gt 0 ]; do
     --name) VM_NAME="$2"; shift 2 ;;
     --skip-create) SKIP_CREATE=true; shift ;;
     --skip-bootstrap) SKIP_BOOTSTRAP=true; shift ;;
+    --insecure) INSECURE=true; shift ;;
     *) echo "unknown arg: $1" >&2; usage; exit 1 ;;
   esac
 done
@@ -126,6 +128,14 @@ else
   echo "→ Building binaries"
   make -C "${PROJECT_DIR}" build
   sudo install -m755 "${PROJECT_DIR}/bin/krytond" "${PROJECT_DIR}/bin/krytonctl" /usr/local/bin/
+  AUTH_MODE="apikey"
+  KEYS_FILE="${HOME}/.kryton/keys.json"
+  if [ "${INSECURE}" = true ]; then
+    AUTH_MODE="disabled"
+    KEYS_FILE=""
+  else
+    KRYTON_KEYS_DIR="${HOME}/.kryton" "${SCRIPT_DIR}/ensure-api-keys.sh"
+  fi
   sudo tee /etc/systemd/system/kryton-kubevirt.service >/dev/null <<UNIT
 [Unit]
 Description=Kryton KubeVirt control plane
@@ -135,7 +145,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 Environment=KRYTON_PROVIDER=kubevirt
-Environment=KRYTON_AUTH_MODE=disabled
+Environment=KRYTON_AUTH_MODE=${AUTH_MODE}
+Environment=KRYTON_API_KEYS_FILE=${KEYS_FILE}
 Environment=KRYTON_ALLOW_INSECURE=true
 Environment=KRYTON_ADDR=:${PORT}
 Environment=KRYTON_IMAGE_NAMESPACE=kryton-images
@@ -162,15 +173,19 @@ UNIT
 fi
 
 API_URL="${KRYTON_URL:-${API_URL}}"
+AUTH_HDR=()
+if [ "${INSECURE}" != true ] && [ -f "${HOME}/.kryton/lab.token" ]; then
+  AUTH_HDR=(-H "Authorization: Bearer $(cat "${HOME}/.kryton/lab.token")")
+fi
 echo "→ Waiting for ${API_URL}/readyz"
 for _ in $(seq 1 30); do
-  if curl -fsS "${API_URL}/readyz" >/dev/null 2>&1; then break; fi
+  if curl -fsS "${AUTH_HDR[@]}" "${API_URL}/readyz" >/dev/null 2>&1; then break; fi
   sleep 2
 done
-curl -fsS "${API_URL}/readyz" >/dev/null
+curl -fsS "${AUTH_HDR[@]}" "${API_URL}/readyz" >/dev/null
 
 echo "→ Doctor"
-curl -sS "${API_URL}/api/v1/doctor" | jq .
+curl -sS "${AUTH_HDR[@]}" "${API_URL}/api/v1/doctor" | jq .
 
 if [ "${SKIP_CREATE}" = true ]; then
   echo "✓ Setup complete (skipped VM create)"
@@ -180,6 +195,7 @@ fi
 
 echo "→ Creating Windows 11 VM: ${VM_NAME}"
 CREATE="$(curl -fsS -X POST "${API_URL}/api/v1/machines" \
+  "${AUTH_HDR[@]}" \
   -H 'Content-Type: application/json' \
   -d "{\"project\":\"default\",\"name\":\"${VM_NAME}\",\"image\":\"${IMAGE_ID}\",\"compute\":{\"cpu\":4,\"memoryMiB\":8192},\"disk\":{\"sizeGiB\":96}}")"
 echo "${CREATE}" | jq .
@@ -188,7 +204,7 @@ MID="$(echo "${CREATE}" | jq -r '.id')"
 echo "→ Polling machine (up to 10 min)"
 for _ in $(seq 1 60); do
   sleep 10
-  BODY="$(curl -fsS "${API_URL}/api/v1/machines/${MID}?project=default")"
+  BODY="$(curl -fsS "${AUTH_HDR[@]}" "${API_URL}/api/v1/machines/${MID}?project=default")"
   STATE="$(echo "${BODY}" | jq -r '.state')"
   MSG="$(echo "${BODY}" | jq -r '.message // empty')"
   IPS="$(echo "${BODY}" | jq -r '.ipAddresses | join(", ") // empty')"

@@ -2,7 +2,7 @@
 
 # Kryton
 
-### Windows virtualization, beautifully simple.
+### Windows virtualization control plane.
 
 One stable machine API. Kubernetes, KubeVirt, and dockur stay behind the provider boundary.
 
@@ -10,7 +10,7 @@ One stable machine API. Kubernetes, KubeVirt, and dockur stay behind the provide
 [![License: Apache-2.0](https://img.shields.io/github/license/zyvorai/kryton)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
 
-[Quick start](#quick-start) · [Install](#install) · [KubeVirt](#kubevirt-windows-vms) · [Remote deploy](#remote-deploy) · [Dockur lab](#dockur-lab-provider) · [Helm](#helm-kubevirt) · [API](#api) · [Docs](docs/)
+[Quick start](#quick-start) · [Install](#install) · [Customer ready](docs/CUSTOMER.md) · [KubeVirt](#kubevirt-windows-vms) · [Remote deploy](#remote-deploy) · [Dockur lab](#dockur-lab-provider) · [Helm](#helm-kubevirt) · [API](#api) · [Docs](docs/)
 
 </div>
 
@@ -38,7 +38,7 @@ One stable machine API. Kubernetes, KubeVirt, and dockur stay behind the provide
 | **Auth** | API keys · trusted reverse proxy · secure-by-default |
 | **Day-2** | Start / stop / snapshot / TTL expiry · SSE + webhooks |
 | **Diagnostics** | `krytonctl doctor` + `/api/v1/doctor` |
-| **UI** | Apple-inspired dark/light dashboard with collapsible rail |
+| **UI** | Operator dashboard with collapsible rail (light/dark) |
 | **License** | Apache-2.0 — no Windows media or keys shipped |
 
 ### Providers
@@ -276,6 +276,7 @@ Run `krytonctl doctor` after changing provider settings to validate the environm
 |-----|--------|
 | [DEPLOY-REMOTE.md](docs/DEPLOY-REMOTE.md) | SSH / rsync lab deploy |
 | [DOCKUR.md](docs/DOCKUR.md) | Real Windows via dockur/windows provider |
+| [CUSTOMER.md](docs/CUSTOMER.md) | Production vs lab readiness checklist |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production KubeVirt |
 | [STORAGE.md](docs/STORAGE.md) | Rook Ceph / Longhorn disks and snapshots |
 | [ATLAS.md](docs/ATLAS.md) | Integrate Zyvor Atlas storage control plane |
@@ -291,4 +292,4 @@ Run `krytonctl doctor` after changing provider settings to validate the environm
 
 Apache License 2.0. See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
 
-**Kryton** — Windows virtualization, beautifully simple. · [zyvorai](https://github.com/zyvorai)
+**Kryton** — Windows virtualization control plane. · [zyvorai](https://github.com/zyvorai)

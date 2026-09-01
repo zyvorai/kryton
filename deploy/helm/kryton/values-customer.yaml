@@ -1,0 +1,36 @@
+# Customer / production profile: KubeVirt + API key auth + Rook Ceph disks.
+provider: kubevirt
+projects: [default]
+defaultProject: default
+imageNamespace: kryton-images
+storageClass: rook-ceph-block
+
+auth:
+  mode: apikey
+  allowInsecure: false
+  # Mount keys from a Secret (create before install):
+  #   TOKEN=$(krytonctl generate-token)
+  #   HASH=$(krytonctl hash-token "$TOKEN")
+  #   kubectl -n kryton create secret generic kryton-auth \
+  #     --from-literal=keys.json="{\"keys\":[{\"name\":\"ops\",\"sha256\":\"$HASH\",\"role\":\"admin\",\"projects\":[\"*\"]}]}"
+  existingSecret: kryton-auth
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: kryton.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: kryton-tls
+      hosts:
+        - kryton.example.com
+
+replicaCount: 1

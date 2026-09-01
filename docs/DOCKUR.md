@@ -18,6 +18,16 @@ Use this provider for labs, demos, and developer workstations. For production es
 
 Run `krytonctl doctor` to validate all of the above before creating machines.
 
+### Secure lab (recommended on shared hosts)
+
+```bash
+./scripts/ensure-api-keys.sh
+./scripts/harden-lab-services.sh
+export KRYTON_TOKEN=$(cat ~/.kryton/lab.token)
+```
+
+See [CUSTOMER.md](CUSTOMER.md).
+
 ---
 
 ## Enable
@@ -52,11 +62,17 @@ Kryton image IDs map to dockur `VERSION` codes:
 | Kryton image ID | dockur `VERSION` |
 |-----------------|------------------|
 | `windows-11-enterprise` | `11e` |
+| `windows-11-pro` | `11` |
+| `windows-11-ltsc` | `11l` |
+| `windows-10-enterprise` | `10e` |
+| `windows-10-pro` | `10` |
+| `windows-10-ltsc` | `10l` |
+| `windows-tiny11` | `tiny11` |
+| `windows-tiny11-core` | `core11` |
 | `windows-server-2025` | `2025` |
 | `windows-server-2022` | `2022` |
-| `windows-11-pro` | `11` |
-| `windows-10-pro` | `10` |
 | `windows-server-2019` | `2019` |
+| `windows-server-2016` | `2016` |
 
 Catalog entries carry `dockurVersion` so custom image files can override the built-in map.
 
@@ -65,7 +81,10 @@ Catalog entries carry `dockurVersion` so custom image files can override the bui
 ## Create a machine
 
 ```bash
-krytonctl create --image windows-11-enterprise --cpu 4 --memory 8192 lab-win01
+krytonctl create --image windows-11-enterprise --cpu 4 --memory 8192 \
+  --dockur-username labuser --dockur-password 'ChangeMe!' \
+  --dockur-language English --dockur-region en-US --dockur-audio \
+  --dockur-extra-disks 32 lab-win01
 krytonctl get <id>
 ```
 
@@ -74,8 +93,30 @@ While installing, the machine reports:
 - `consoleUrl` — dockur web viewer (watch unattended setup)
 - `progressPercent` — install progress when available
 - `message` — current phase description
+- `rdpHost` / `rdpPort` / `rdpUsername` — RDP endpoint (default user `Docker`)
 
 Open the console URL in a browser. RDP is published on the host port starting at `KRYTON_DOCKUR_RDP_BASE`.
+
+Default guest credentials (override with `dockur` on create): **Docker** / **admin**.
+
+### Dockur options (`spec.dockur`)
+
+| Field | dockur env / volume | Notes |
+|-------|---------------------|-------|
+| `username` / `password` | `USERNAME` / `PASSWORD` | Password is write-only (redacted on GET) |
+| `hostname` | `HOST` | Defaults to machine name |
+| `language` / `region` / `keyboard` | `LANGUAGE` / `REGION` / `KEYBOARD` | Locale |
+| `productKey` | `KEY` | Activation key |
+| `domain` / `domainOu` | `DOMAIN` / `DOMAIN_OU` | AD join during install |
+| `sharedDir` | host path → `/shared` | Desktop **Shared** / drive `Z:` |
+| `oemDir` | host path → `/oem` | Runs `install.bat` post-setup |
+| `command` | `COMMAND` | Single post-install command |
+| `customIso` | URL as `VERSION`, or file → `/custom.iso` | Bring-your-own media |
+| `edition` | `EDITION` | e.g. `core` for Server Core |
+| `audio` | `AUDIO=Y` | Web viewer audio |
+| `secureBoot` | `BOOT_MODE=windows_secure` + `TPM=Y` | Win11-style secure guest |
+| `extraDisksGiB` | `DISK2_SIZE`… + `/storage2`… | Up to 3 extra disks |
+| `autologin` | `AUTOLOGIN=N` when `false` | Default dockur autologin stays on |
 
 ### API example
 
@@ -85,9 +126,16 @@ curl -s -X POST http://localhost:8080/api/v1/machines \
   -d '{
     "project": "default",
     "name": "lab-win01",
-    "image": "windows-server-2025",
+    "image": "windows-11-enterprise",
     "compute": {"cpu": 4, "memoryMiB": 8192},
-    "disk": {"sizeGiB": 80}
+    "disk": {"sizeGiB": 80},
+    "dockur": {
+      "username": "labuser",
+      "password": "ChangeMe!",
+      "language": "English",
+      "sharedDir": "/home/lab/shared/win01",
+      "audio": true
+    }
   }' | jq .
 ```
 

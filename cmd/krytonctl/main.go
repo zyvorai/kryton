@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -81,13 +82,94 @@ func createCommand(c client, args []string) {
 	network := f.String("network", "", "Multus network attachment definition")
 	ttl := f.Int("ttl", 0, "TTL in minutes")
 	project := f.String("project", c.project, "project")
+	dUsername := f.String("dockur-username", "", "dockur guest username")
+	dPassword := f.String("dockur-password", "", "dockur guest password")
+	dHostname := f.String("dockur-hostname", "", "dockur HOST (defaults to machine name)")
+	dLanguage := f.String("dockur-language", "", "dockur LANGUAGE")
+	dRegion := f.String("dockur-region", "", "dockur REGION")
+	dKeyboard := f.String("dockur-keyboard", "", "dockur KEYBOARD")
+	dProductKey := f.String("dockur-product-key", "", "dockur product KEY")
+	dDomain := f.String("dockur-domain", "", "dockur DOMAIN for AD join")
+	dDomainOU := f.String("dockur-domain-ou", "", "dockur DOMAIN_OU")
+	dSharedDir := f.String("dockur-shared-dir", "", "host path mounted at /shared")
+	dOemDir := f.String("dockur-oem-dir", "", "host path mounted at /oem")
+	dCommand := f.String("dockur-command", "", "post-install COMMAND")
+	dCustomISO := f.String("dockur-custom-iso", "", "custom ISO URL or host path")
+	dEdition := f.String("dockur-edition", "", "dockur EDITION (e.g. core)")
+	dExtraDisks := f.String("dockur-extra-disks", "", "comma-separated extra disk sizes in GiB")
+	dAudio := f.Bool("dockur-audio", false, "enable web viewer audio (AUDIO=Y)")
+	dSecureBoot := f.Bool("dockur-secure-boot", false, "enable secure boot + TPM")
+	dNoAutologin := f.Bool("dockur-no-autologin", false, "disable dockur autologin (AUTOLOGIN=N)")
 	_ = f.Parse(args)
 	if f.NArg() != 1 {
 		fmt.Fprintln(os.Stderr, "create requires NAME")
 		os.Exit(2)
 	}
-	body := map[string]any{"project": *project, "name": f.Arg(0), "image": *image, "compute": map[string]any{"cpu": *cpu, "memoryMiB": *memory}, "disk": map[string]any{"sizeGiB": *disk}, "network": map[string]any{"networkId": *network}, "ttlMinutes": *ttl}
+	body := map[string]any{
+		"project": *project, "name": f.Arg(0), "image": *image,
+		"compute": map[string]any{"cpu": *cpu, "memoryMiB": *memory},
+		"disk":    map[string]any{"sizeGiB": *disk},
+		"network": map[string]any{"networkId": *network},
+		"ttlMinutes": *ttl,
+	}
+	if dockur := buildDockurOptions(*dUsername, *dPassword, *dHostname, *dLanguage, *dRegion, *dKeyboard, *dProductKey, *dDomain, *dDomainOU, *dSharedDir, *dOemDir, *dCommand, *dCustomISO, *dEdition, *dExtraDisks, *dAudio, *dSecureBoot, *dNoAutologin); dockur != nil {
+		body["dockur"] = dockur
+	}
 	c.do("POST", "/api/v1/machines", body)
+}
+
+func buildDockurOptions(username, password, hostname, language, region, keyboard, productKey, domain, domainOU, sharedDir, oemDir, command, customISO, edition, extraDisks string, audio, secureBoot, noAutologin bool) map[string]any {
+	out := map[string]any{}
+	set := func(k, v string) {
+		if strings.TrimSpace(v) != "" {
+			out[k] = strings.TrimSpace(v)
+		}
+	}
+	set("username", username)
+	set("password", password)
+	set("hostname", hostname)
+	set("language", language)
+	set("region", region)
+	set("keyboard", keyboard)
+	set("productKey", productKey)
+	set("domain", domain)
+	set("domainOu", domainOU)
+	set("sharedDir", sharedDir)
+	set("oemDir", oemDir)
+	set("command", command)
+	set("customIso", customISO)
+	set("edition", edition)
+	if extraDisks != "" {
+		var sizes []int
+		for _, part := range strings.Split(extraDisks, ",") {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+			n, err := strconv.Atoi(part)
+			if err != nil || n <= 0 {
+				fmt.Fprintf(os.Stderr, "invalid dockur-extra-disks entry %q\n", part)
+				os.Exit(2)
+			}
+			sizes = append(sizes, n)
+		}
+		if len(sizes) > 0 {
+			out["extraDisksGiB"] = sizes
+		}
+	}
+	if audio {
+		out["audio"] = true
+	}
+	if secureBoot {
+		out["secureBoot"] = true
+	}
+	if noAutologin {
+		out["autologin"] = false
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 func machineCommand(c client, cmd string, args []string) {
 	f := flag.NewFlagSet(cmd, flag.ExitOnError)
@@ -166,6 +248,13 @@ func usage() {
 	fmt.Println(`krytonctl commands:
   list
   create NAME [--image ID --cpu N --memory MiB --disk GiB --network NAD --ttl MIN]
+    dockur flags (provider=dockur):
+      --dockur-username --dockur-password --dockur-hostname
+      --dockur-language --dockur-region --dockur-keyboard
+      --dockur-product-key --dockur-domain --dockur-domain-ou
+      --dockur-shared-dir --dockur-oem-dir --dockur-command
+      --dockur-custom-iso --dockur-edition --dockur-extra-disks 32,64
+      --dockur-audio --dockur-secure-boot --dockur-no-autologin
   get MACHINE_ID
   start MACHINE_ID
   stop MACHINE_ID

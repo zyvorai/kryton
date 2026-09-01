@@ -414,6 +414,33 @@ components:
           properties:
             networkId: {type: string}
         ttlMinutes: {type: integer, minimum: 0, maximum: 43200}
+        dockur:
+          $ref: '#/components/schemas/DockurOptions'
+    DockurOptions:
+      type: object
+      description: dockur/windows create options (provider=dockur only). Password is write-only.
+      properties:
+        username: {type: string, maxLength: 64}
+        password: {type: string, maxLength: 128, writeOnly: true}
+        hostname: {type: string, maxLength: 63}
+        language: {type: string}
+        region: {type: string}
+        keyboard: {type: string}
+        productKey: {type: string, maxLength: 64}
+        domain: {type: string}
+        domainOu: {type: string}
+        autologin: {type: boolean}
+        audio: {type: boolean}
+        secureBoot: {type: boolean}
+        sharedDir: {type: string, description: Host path mounted at /shared}
+        oemDir: {type: string, description: Host path mounted at /oem}
+        command: {type: string, maxLength: 2048}
+        customIso: {type: string}
+        edition: {type: string}
+        extraDisksGiB:
+          type: array
+          maxItems: 3
+          items: {type: integer, minimum: 1, maximum: 65536}
     SettingsUpdate:
       type: object
       properties:

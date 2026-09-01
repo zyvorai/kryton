@@ -1,8 +1,10 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/zyvorai/kryton/internal/atlas"
 	"github.com/zyvorai/kryton/internal/auth"
@@ -41,7 +43,10 @@ func (s *Server) loadStorageInventory(r *http.Request) (storage.Inventory, error
 			inv.Setup = st
 		}
 		if inv.ScriptsAvailable && s.p.Name() == "kubevirt" {
-			inv.BlockDevices = storage.ListBlockDevices(r.Context())
+			// lsblk can hang on unhealthy disks; never block StorageClass listing.
+			devCtx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+			inv.BlockDevices = storage.ListBlockDevices(devCtx)
+			cancel()
 		}
 	}
 	rt := s.currentRuntimeSettings()

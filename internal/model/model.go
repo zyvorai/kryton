@@ -39,6 +39,29 @@ type NetworkSpec struct {
 	NetworkID string `json:"networkId,omitempty"`
 }
 
+// DockurOptions maps to dockur/windows compose environment and volumes.
+// Password is accepted on create and written into compose; API responses redact it.
+type DockurOptions struct {
+	Username      string `json:"username,omitempty"`
+	Password      string `json:"password,omitempty"`
+	Hostname      string `json:"hostname,omitempty"`
+	Language      string `json:"language,omitempty"`
+	Region        string `json:"region,omitempty"`
+	Keyboard      string `json:"keyboard,omitempty"`
+	ProductKey    string `json:"productKey,omitempty"`
+	Domain        string `json:"domain,omitempty"`
+	DomainOU      string `json:"domainOu,omitempty"`
+	Autologin     *bool  `json:"autologin,omitempty"`
+	Audio         bool   `json:"audio,omitempty"`
+	SecureBoot    bool   `json:"secureBoot,omitempty"`
+	SharedDir     string `json:"sharedDir,omitempty"`
+	OemDir        string `json:"oemDir,omitempty"`
+	Command       string `json:"command,omitempty"`
+	CustomISO     string `json:"customIso,omitempty"`
+	Edition       string `json:"edition,omitempty"`
+	ExtraDisksGiB []int  `json:"extraDisksGiB,omitempty"`
+}
+
 type MachineSpec struct {
 	Name       string            `json:"name"`
 	Image      string            `json:"image"`
@@ -47,6 +70,7 @@ type MachineSpec struct {
 	Network    NetworkSpec       `json:"network,omitempty"`
 	TTLMinutes int               `json:"ttlMinutes,omitempty"`
 	Labels     map[string]string `json:"labels,omitempty"`
+	Dockur     *DockurOptions    `json:"dockur,omitempty"`
 }
 
 type ProviderRef struct {
@@ -73,6 +97,7 @@ type Machine struct {
 	ConsoleURL      string       `json:"consoleUrl,omitempty"`
 	RdpHost         string       `json:"rdpHost,omitempty"`
 	RdpPort         int          `json:"rdpPort,omitempty"`
+	RdpUsername     string       `json:"rdpUsername,omitempty"`
 	ProgressPercent *int         `json:"progressPercent,omitempty"`
 	Message         string       `json:"message,omitempty"`
 	Conditions      []Condition  `json:"conditions,omitempty"`
@@ -181,6 +206,41 @@ func ValidateMachineSpec(s MachineSpec) error {
 	for k, v := range s.Labels {
 		if !labelKey.MatchString(k) || !labelValue.MatchString(v) {
 			problems = append(problems, fmt.Sprintf("invalid label %q", k))
+		}
+	}
+	if d := s.Dockur; d != nil {
+		if len(d.Username) > 64 {
+			problems = append(problems, "dockur.username is too long")
+		}
+		if len(d.Password) > 128 {
+			problems = append(problems, "dockur.password is too long")
+		}
+		if len(d.Hostname) > 63 {
+			problems = append(problems, "dockur.hostname is too long")
+		}
+		if len(d.Language) > 64 || len(d.Region) > 32 || len(d.Keyboard) > 32 {
+			problems = append(problems, "dockur locale fields are too long")
+		}
+		if len(d.ProductKey) > 64 {
+			problems = append(problems, "dockur.productKey is too long")
+		}
+		if len(d.Domain) > 253 || len(d.DomainOU) > 512 {
+			problems = append(problems, "dockur domain fields are too long")
+		}
+		if len(d.SharedDir) > 1024 || len(d.OemDir) > 1024 || len(d.CustomISO) > 2048 {
+			problems = append(problems, "dockur path/url fields are too long")
+		}
+		if len(d.Command) > 4096 {
+			problems = append(problems, "dockur.command is too long")
+		}
+		if len(d.ExtraDisksGiB) > 3 {
+			problems = append(problems, "dockur.extraDisksGiB supports at most 3 disks")
+		}
+		for _, g := range d.ExtraDisksGiB {
+			if g < 1 || g > 65536 {
+				problems = append(problems, "dockur.extraDisksGiB entries must be between 1 and 65536")
+				break
+			}
 		}
 	}
 	if len(problems) > 0 {
