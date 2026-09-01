@@ -2,6 +2,8 @@
 
 What “done” means for external deployments.
 
+**New users:** start with [USER-GUIDE.md](USER-GUIDE.md) for step-by-step lab and production workflows.
+
 ## Production (KubeVirt on Kubernetes)
 
 Follow [GA.md](GA.md) end-to-end:

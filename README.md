@@ -10,7 +10,7 @@ One stable machine API. Kubernetes, KubeVirt, and dockur stay behind the provide
 [![License: Apache-2.0](https://img.shields.io/github/license/zyvorai/kryton)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
 
-[Quick start](#quick-start) · [Install](#install) · [Customer ready](docs/CUSTOMER.md) · [KubeVirt](#kubevirt-windows-vms) · [Remote deploy](#remote-deploy) · [Dockur lab](#dockur-lab-provider) · [Helm](#helm-kubevirt) · [API](#api) · [Docs](docs/)
+[Quick start](#quick-start) · **[How to use](#how-to-use-kryton)** · [User guide](docs/USER-GUIDE.md) · [Customer ready](docs/CUSTOMER.md) · [KubeVirt](#kubevirt-windows-vms) · [Remote deploy](#remote-deploy) · [Dockur lab](#dockur-lab-provider) · [Helm](#helm-kubevirt) · [API](#api) · [All docs](docs/README.md)
 
 </div>
 
@@ -48,6 +48,86 @@ One stable machine API. Kubernetes, KubeVirt, and dockur stay behind the provide
 | `demo` | Local eval, CI smoke tests | No (in-memory) |
 | `dockur` | Lab hosts with Docker/Podman + KVM | Yes ([dockur/windows](https://github.com/dockur/windows)) |
 | `kubevirt` | Production Kubernetes estates | Yes (operator-managed golden images) |
+
+---
+
+## How to use Kryton
+
+Pick the path that matches your role. Full walkthroughs (UI, CLI, API, troubleshooting): **[docs/USER-GUIDE.md](docs/USER-GUIDE.md)**.
+
+| You are… | Do this | Provider | Auth |
+|----------|---------|----------|------|
+| **Trying it locally** | `make demo` → open `:8080` | `demo` | off |
+| **Running real Windows in a lab** | [Deploy remote](#remote-deploy) → [harden lab](#dockur-lab-provider) → create VM | `dockur` | apikey |
+| **Production on Kubernetes** | [Golden image](docs/GOLDEN-IMAGES.md) → [setup-kubevirt](#kubevirt-windows-vms) → Helm | `kubevirt` | apikey + TLS |
+| **Integrating a portal / CI** | [API](#api) + `KRYTON_TOKEN` | any | apikey |
+
+### Typical lab workflow (dockur)
+
+```bash
+# 1. Deploy to Linux host
+make deploy-remote H=<host> U=<user> ARGS='--quick --key'
+
+# 2. Harden shared lab (apikey + auto-auth UI)
+ssh <user>@<host> 'cd ~/.deployments/kryton && ./scripts/ensure-api-keys.sh && KRYTON_LAB_PUBLIC_HOST=<host-ip> ./scripts/harden-lab-services.sh'
+
+# 3. Create real Windows
+export KRYTON_URL=http://<host>:7088
+export KRYTON_TOKEN=$(ssh <user>@<host> 'cat ~/.kryton/lab.token')
+krytonctl doctor
+krytonctl create --image windows-11-enterprise --cpu 4 --memory 8192 win11-01
+krytonctl get <uuid>    # open consoleUrl, Copy RDP in UI
+```
+
+### Typical production workflow (KubeVirt)
+
+```bash
+# 1. Golden image (45–90 min first time)
+./scripts/setup-kubevirt-production.sh --build-golden
+
+# 2. Or from laptop when lab SSH works:
+make run-kubevirt-production-remote H=<host> U=<user> BUILD=1
+
+# 3. Verify + create
+kubectl -n kryton-images get datasource windows-11-enterprise
+krytonctl doctor
+krytonctl create --image windows-11-enterprise prod-win-01
+```
+
+### UI (all providers)
+
+| Page | What you do |
+|------|-------------|
+| **Overview** | Project health and activity |
+| **Machines** | Create · start/stop · console · snapshots |
+| **Images** | Catalog · golden image factory (kubevirt hosts) |
+| **Activity** | Event timeline · SSE stream |
+| **Settings** | Storage class · Atlas · auth |
+
+Browser auth: paste API token once, or use **lab auto-auth** (`KRYTON_LAB_AUTO_AUTH=true` on shared labs).
+
+### CLI quick reference
+
+```bash
+krytonctl list | create NAME | get ID | start|stop|delete ID
+krytonctl snapshot ID | snapshots ID | restore ID SNAP
+krytonctl doctor | images | capabilities | events
+krytonctl generate-token | hash-token TOKEN
+```
+
+Create flags: `--image`, `--cpu`, `--memory`, `--disk`, `--ttl`, and all `--dockur-*` options — see [DOCKUR.md](docs/DOCKUR.md).
+
+Environment: `KRYTON_URL`, `KRYTON_TOKEN`, `KRYTON_PROJECT`.
+
+### Zyvor lab (demo host)
+
+| Service | URL |
+|---------|-----|
+| Demo | `http://175.110.122.71:8088/` |
+| Dockur | `https://175.110.122.71:7088/` |
+| KubeVirt API | `https://175.110.122.71:9088/` |
+
+Product site: [zyvor.dev/kryton](https://zyvor.dev/kryton) · Docs: [zyvor.dev/docs/kryton](https://zyvor.dev/docs/kryton)
 
 ---
 
@@ -105,6 +185,10 @@ docker run --rm -p 8080:8080 \
 | `make image` | Docker image `kryton:dev` |
 | `make deploy-remote H=… U=…` | SSH deploy (see below) |
 | `make setup-kubevirt IMAGE=…` | Bootstrap KubeVirt + API + Windows 11 VM |
+| `make setup-kubevirt-production BUILD=1` | Golden + CDI + API + VM |
+| `make run-kubevirt-production-remote H=… U=…` | Remote production pipeline |
+| `make bootstrap-kubevirt IMAGE=… ID=…` | CDI DataSource only |
+| `make build-golden VERSION=11e` | Golden qcow2 via dockur |
 
 ---
 
@@ -276,6 +360,8 @@ Run `krytonctl doctor` after changing provider settings to validate the environm
 
 | Doc | Topic |
 |-----|--------|
+| **[USER-GUIDE.md](docs/USER-GUIDE.md)** | **How to use Kryton — all personas (start here)** |
+| [docs/README.md](docs/README.md) | Documentation index |
 | [DEPLOY-REMOTE.md](docs/DEPLOY-REMOTE.md) | SSH / rsync lab deploy |
 | [DOCKUR.md](docs/DOCKUR.md) | Real Windows via dockur/windows provider |
 | [CUSTOMER.md](docs/CUSTOMER.md) | Production vs lab readiness checklist |

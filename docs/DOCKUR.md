@@ -2,6 +2,8 @@
 
 Kryton can provision **real Windows guests** on a Linux host using [dockur/windows](https://github.com/dockur/windows) — the same engine behind [WinPodX](https://github.com/kernalix7/winpodx) — without a full KubeVirt cluster.
 
+**Step-by-step lab workflow:** [USER-GUIDE.md § Lab operator](USER-GUIDE.md#2-lab-operator-dockur)
+
 Use this provider for labs, demos, and developer workstations. For production estates, use the KubeVirt provider with Helm.
 
 ---

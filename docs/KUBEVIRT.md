@@ -2,6 +2,8 @@
 
 Provision **Windows 11** (and other catalog images) on Kubernetes via KubeVirt. Kryton exposes the same REST API — callers never touch `VirtualMachine` YAML.
 
+**Step-by-step production workflow:** [USER-GUIDE.md § Production](USER-GUIDE.md#3-production-operator-kubevirt)
+
 ---
 
 ## Prerequisites
