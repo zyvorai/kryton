@@ -117,6 +117,8 @@ Environment=KRYTON_ADDR=:${PORT}
 Environment=KRYTON_IMAGE_NAMESPACE=kryton-images
 Environment=KRYTON_PROJECTS=default
 Environment=KRYTON_DEFAULT_PROJECT=default
+Environment=KRYTON_KUBECONFIG=${HOME}/.kube/config
+Environment=KRYTON_EVENTS_FILE=${HOME}/.kryton/events-kubevirt.jsonl
 ExecStart=/usr/local/bin/krytond
 Restart=on-failure
 RestartSec=3
