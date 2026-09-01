@@ -47,6 +47,8 @@ type Result struct {
 	TestedAt string  `json:"testedAt"`
 }
 
+// Input supplies the live handles Test needs to reach each dependency;
+// KubeClient nil skips the Kubernetes/KubeVirt/storage probes entirely.
 type Input struct {
 	Provider        provider.Provider
 	KubeClient      *kubeapi.Client
@@ -55,6 +57,10 @@ type Input struct {
 	SnapshotsScript string
 }
 
+// Test runs every applicable probe against in and aggregates them into a
+// Result; it never returns an error, reporting failed dependencies as
+// failed Probes instead. Individual probes are internally time-bounded,
+// so Test always returns even if a dependency hangs.
 func Test(ctx context.Context, in Input) Result {
 	start := time.Now()
 	var probes []Probe

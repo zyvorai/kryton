@@ -27,6 +27,8 @@ import (
 	"github.com/zyvorai/kryton/internal/model"
 )
 
+// Catalog is an immutable, ID-keyed set of deployable Windows images,
+// built once at startup by Load. It is safe for concurrent reads.
 type Catalog struct {
 	items map[string]model.Image
 }
@@ -35,6 +37,10 @@ type fileFormat struct {
 	Images []model.Image `json:"images"`
 }
 
+// Load builds a Catalog. With path empty it uses Kryton's built-in image
+// defaults; otherwise it reads and validates an operator-supplied
+// KRYTON_IMAGES_FILE JSON document (unique, non-empty IDs/names),
+// replacing the defaults entirely rather than merging with them.
 func Load(path string) (*Catalog, error) {
 	items := defaults()
 	if path != "" {
@@ -64,6 +70,7 @@ func Load(path string) (*Catalog, error) {
 	return c, nil
 }
 
+// List returns every image in the catalog, sorted by display Name.
 func (c *Catalog) List() []model.Image {
 	out := make([]model.Image, 0, len(c.items))
 	for _, img := range c.items {
@@ -73,6 +80,7 @@ func (c *Catalog) List() []model.Image {
 	return out
 }
 
+// Get looks up one image by ID.
 func (c *Catalog) Get(id string) (model.Image, bool) {
 	img, ok := c.items[id]
 	return img, ok

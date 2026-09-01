@@ -16,6 +16,9 @@ package model
 
 import "time"
 
+// GoldenBuildState tracks progress through the golden-image pipeline
+// driven by internal/golden: boot a dockur instance, install Windows,
+// Sysprep it, then capture the disk as a reusable qcow2.
 type GoldenBuildState string
 
 const (
@@ -28,27 +31,35 @@ const (
 	GoldenFailed     GoldenBuildState = "failed"
 )
 
+// GoldenBuild is the status of one golden-image build tracked by
+// internal/golden, exposed via the Images page and GET /api/v1/jobs.
 type GoldenBuild struct {
-	ID               string           `json:"id"`
-	Version          string           `json:"version"`
-	ImageID          string           `json:"imageId"`
-	State            GoldenBuildState `json:"state"`
-	Phase            string           `json:"phase,omitempty"`
-	ProgressPercent  int              `json:"progressPercent"`
-	Message          string           `json:"message"`
-	ConsoleURL       string           `json:"consoleUrl,omitempty"`
-	OutputPath       string           `json:"outputPath,omitempty"`
-	SHA256           string           `json:"sha256,omitempty"`
-	StartedAt        time.Time        `json:"startedAt,omitempty"`
-	UpdatedAt        time.Time        `json:"updatedAt,omitempty"`
-	Error            string           `json:"error,omitempty"`
-	BootstrapState   string           `json:"bootstrapState,omitempty"`
-	BootstrapMessage string           `json:"bootstrapMessage,omitempty"`
-	DataSource       string           `json:"dataSource,omitempty"`
+	ID              string           `json:"id"`
+	Version         string           `json:"version"`
+	ImageID         string           `json:"imageId"`
+	State           GoldenBuildState `json:"state"`
+	Phase           string           `json:"phase,omitempty"`
+	ProgressPercent int              `json:"progressPercent"`
+	Message         string           `json:"message"`
+	ConsoleURL      string           `json:"consoleUrl,omitempty"`
+	// OutputPath and SHA256 are set once the qcow2 has been captured to disk.
+	OutputPath string    `json:"outputPath,omitempty"`
+	SHA256     string    `json:"sha256,omitempty"`
+	StartedAt  time.Time `json:"startedAt,omitempty"`
+	UpdatedAt  time.Time `json:"updatedAt,omitempty"`
+	Error      string    `json:"error,omitempty"`
+	// BootstrapState/BootstrapMessage/DataSource track the follow-on step
+	// that imports OutputPath into a KubeVirt CDI DataSource; empty until
+	// that step is requested.
+	BootstrapState   string `json:"bootstrapState,omitempty"`
+	BootstrapMessage string `json:"bootstrapMessage,omitempty"`
+	DataSource       string `json:"dataSource,omitempty"`
 }
 
+// GoldenStartRequest is the payload for starting a new golden-image build.
 type GoldenStartRequest struct {
 	ImageID string `json:"imageId"`
 	Version string `json:"version,omitempty"`
-	Auto    bool   `json:"auto,omitempty"`
+	// Auto skips interactive Sysprep confirmation and finalizes automatically.
+	Auto bool `json:"auto,omitempty"`
 }

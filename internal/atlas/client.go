@@ -28,6 +28,8 @@ import (
 	"time"
 )
 
+// ProductID is the default Atlas "owner product" identifier Kryton
+// registers itself as when Config.Product is unset.
 const ProductID = "kryton"
 
 // Config is how Kryton reaches Atlas (Zyvor storage control plane).
@@ -66,6 +68,8 @@ type Client struct {
 	token   string
 }
 
+// NewClient builds a Client for cfg.BaseURL, bearing cfg.Token on every
+// request. It does not verify reachability; use Test for that.
 func NewClient(cfg Config) *Client {
 	base := strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
 	return &Client{
@@ -75,10 +79,15 @@ func NewClient(cfg Config) *Client {
 	}
 }
 
+// Configured reports whether c has a base URL to talk to; safe to call on a nil *Client.
 func (c *Client) Configured() bool {
 	return c != nil && c.baseURL != ""
 }
 
+// Test runs the full Atlas connectivity check (readyz, version, storage
+// classes) used by both `krytonctl doctor` and Settings → Integrations →
+// Test connection. It never returns an error: a disabled or unreachable
+// Atlas is reported as an unhealthy TestResult instead.
 func Test(ctx context.Context, cfg Config) TestResult {
 	now := time.Now().UTC().Format(time.RFC3339)
 	product := strings.TrimSpace(cfg.Product)

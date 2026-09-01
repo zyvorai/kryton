@@ -111,6 +111,8 @@ func (s *Server) cors(next http.Handler) http.Handler {
 	})
 }
 
+// ParseCORSOrigins splits KRYTON_CORS_ORIGINS (comma-separated, "*" for
+// any origin) into the list cors uses for Access-Control-Allow-Origin.
 func ParseCORSOrigins(v string) []string {
 	var out []string
 	for _, p := range strings.Split(v, ",") {

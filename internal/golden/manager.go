@@ -33,10 +33,17 @@ import (
 	"github.com/zyvorai/kryton/internal/model"
 )
 
+// VersionResolver maps a Kryton image ID to a dockur/windows VERSION
+// code for the build script; internal/catalog.Catalog implements it.
 type VersionResolver interface {
 	DockurVersion(imageID string) (string, bool)
 }
 
+// Manager tracks golden-image builds and CDI bootstraps on disk under
+// baseDir (one subdirectory per build ID, holding status.json), guarding
+// against starting a second build/bootstrap already in flight for the
+// same ID. Safe for concurrent use; State-changing work runs in
+// background goroutines started by Start/Bootstrap.
 type Manager struct {
 	mu             sync.Mutex
 	running        map[string]struct{}
@@ -51,6 +58,8 @@ type Manager struct {
 	resolver       VersionResolver
 }
 
+// Config configures New; BaseDir defaults to ~/.kryton/golden, PublicHost
+// to 127.0.0.1, and ImageNamespace to kryton-images when left empty.
 type Config struct {
 	BaseDir        string
 	ScriptPath     string
@@ -61,6 +70,8 @@ type Config struct {
 	Resolver       VersionResolver
 }
 
+// New builds a Manager, creating cfg.BaseDir if needed. It does not
+// check for docker/KVM/script availability — call Available for that.
 func New(cfg Config) (*Manager, error) {
 	base := strings.TrimSpace(cfg.BaseDir)
 	if base == "" {
@@ -95,6 +106,8 @@ func New(cfg Config) (*Manager, error) {
 	}, nil
 }
 
+// Sentinel errors from Manager methods; the API layer maps these to
+// specific HTTP status codes (see internal/api/golden.go).
 var (
 	ErrNotFound          = fmt.Errorf("golden build not found")
 	ErrNotReady          = fmt.Errorf("golden image is not ready to publish")
@@ -113,8 +126,11 @@ func defaultVersions() map[string]string {
 	}
 }
 
+// BaseDir returns the directory holding one subdirectory per build ID.
 func (m *Manager) BaseDir() string { return m.baseDir }
 
+// Available reports whether this host can actually run a golden build:
+// docker on PATH, /dev/kvm present, and the build script configured and present.
 func (m *Manager) Available() error {
 	if _, err := exec.LookPath("docker"); err != nil {
 		return fmt.Errorf("docker not found")
@@ -131,6 +147,8 @@ func (m *Manager) Available() error {
 	return nil
 }
 
+// List returns every known build (reading status.json from each
+// subdirectory of baseDir), newest UpdatedAt first.
 func (m *Manager) List() ([]model.GoldenBuild, error) {
 	entries, err := os.ReadDir(m.baseDir)
 	if err != nil {
@@ -151,6 +169,7 @@ func (m *Manager) List() ([]model.GoldenBuild, error) {
 	return out, nil
 }
 
+// Get returns one build's current status, or ErrNotFound if id is unknown.
 func (m *Manager) Get(id string) (*model.GoldenBuild, error) {
 	b, err := m.readStatus(filepath.Join(m.baseDir, id, "status.json"))
 	if err != nil {
@@ -162,6 +181,11 @@ func (m *Manager) Get(id string) (*model.GoldenBuild, error) {
 	return &b, nil
 }
 
+// Bootstrap starts (asynchronously) importing build id's captured qcow2
+// into a KubeVirt CDI DataSource. It requires the build to be
+// model.GoldenReady with an artifact still on disk, returns
+// ErrBootstrapRunning if already in progress for id, and returns
+// immediately — poll Get for BootstrapState/BootstrapMessage/DataSource.
 func (m *Manager) Bootstrap(id string) (*model.GoldenBuild, error) {
 	if strings.TrimSpace(m.bootstrapPath) == "" {
 		return nil, ErrBootstrapDisabled
@@ -204,6 +228,10 @@ func (m *Manager) Bootstrap(id string) (*model.GoldenBuild, error) {
 	return m.Get(id)
 }
 
+// Start resolves req to a dockur VERSION and image ID, then runs the
+// build script asynchronously, returning immediately with the initial
+// GoldenBuild status — poll Get (or List) for progress. ctx is currently
+// unused by the async build itself, which runs detached from the request lifecycle.
 func (m *Manager) Start(ctx context.Context, req model.GoldenStartRequest) (*model.GoldenBuild, error) {
 	if err := m.Available(); err != nil {
 		return nil, err

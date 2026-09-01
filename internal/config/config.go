@@ -30,6 +30,9 @@ import (
 	"github.com/zyvorai/kryton/internal/model"
 )
 
+// Config is krytond's fully-resolved runtime configuration, produced by
+// Load from KRYTON_* environment variables (see README.md's Configuration
+// table for the env var each field maps to) and checked by Validate.
 type Config struct {
 	Addr               string
 	Provider           string
@@ -59,6 +62,8 @@ type Config struct {
 	Dockur             Dockur
 }
 
+// Dockur configures the dockur provider: which container runtime to
+// drive and the host-side port ranges to publish per machine.
 type Dockur struct {
 	Runtime    string
 	DataDir    string
@@ -67,6 +72,9 @@ type Dockur struct {
 	RDPBase    int
 }
 
+// Kubernetes carries the credentials the kubevirt provider uses to reach
+// the Kubernetes API. Load populates it explicitly from KRYTON_KUBERNETES_*
+// vars, or falls back to in-cluster/kubeconfig discovery via resolveKubernetes.
 type Kubernetes struct {
 	Endpoint           string
 	BearerToken        string
@@ -77,12 +85,17 @@ type Kubernetes struct {
 	InsecureSkipVerify bool
 }
 
+// TLS configures krytond's own listener certificate and, optionally,
+// mutual-TLS client verification.
 type TLS struct {
 	CertFile     string
 	KeyFile      string
 	ClientCAFile string
 }
 
+// Load reads Config from the environment, fills in the kubevirt
+// Kubernetes credentials when needed, and calls Validate before
+// returning — cmd/krytond treats any returned error as fatal at startup.
 func Load() (Config, error) {
 	projects := splitCSV(getenv("KRYTON_PROJECTS", "default"))
 	cfg := Config{
@@ -145,6 +158,9 @@ func Load() (Config, error) {
 	return cfg, nil
 }
 
+// Validate checks cross-field invariants Load cannot enforce
+// per-variable alone: provider/auth-mode combinations, project list
+// consistency, namespace validity, and the insecure-mode opt-in rules.
 func (c Config) Validate() error {
 	switch c.Provider {
 	case "demo", "kubevirt", "dockur":

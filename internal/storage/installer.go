@@ -74,6 +74,9 @@ type SetupManager struct {
 	onComplete      func(storageClass string, setDefault bool)
 }
 
+// SetupConfig configures NewSetupManager; OnComplete, if set, is called
+// after a successful Start run with the StorageClass it installed and
+// whether the caller asked it to become the Kryton default.
 type SetupConfig struct {
 	BaseDir         string
 	SnapshotsScript string
@@ -81,6 +84,8 @@ type SetupConfig struct {
 	OnComplete      func(storageClass string, setDefault bool)
 }
 
+// NewSetupManager builds a SetupManager, creating cfg.BaseDir if needed
+// (defaulting to ~/.kryton/storage-setup).
 func NewSetupManager(cfg SetupConfig) (*SetupManager, error) {
 	base := strings.TrimSpace(cfg.BaseDir)
 	if base == "" {
@@ -101,6 +106,8 @@ func NewSetupManager(cfg SetupConfig) (*SetupManager, error) {
 	}, nil
 }
 
+// SnapshotsScript returns the configured enable-kubevirt-snapshots.sh
+// path; safe to call on a nil *SetupManager (returns "").
 func (m *SetupManager) SnapshotsScript() string {
 	if m == nil {
 		return ""
@@ -108,6 +115,9 @@ func (m *SetupManager) SnapshotsScript() string {
 	return m.snapshotsScript
 }
 
+// Available reports whether m is non-nil, its snapshots script is
+// configured and present, and kubectl is on PATH — i.e. whether Start
+// can actually run on this host.
 func (m *SetupManager) Available() bool {
 	if m == nil {
 		return false
@@ -124,9 +134,13 @@ func (m *SetupManager) Available() bool {
 	return true
 }
 
+// StatusPath is the JSON file Start's background run reports progress to.
 func (m *SetupManager) StatusPath() string { return filepath.Join(m.baseDir, "status.json") }
-func (m *SetupManager) LogPath() string    { return filepath.Join(m.baseDir, "job.log") }
 
+// LogPath is the file the setup script's combined stdout/stderr is appended to.
+func (m *SetupManager) LogPath() string { return filepath.Join(m.baseDir, "job.log") }
+
+// Get returns the current setup status, or an idle SetupState if none has run yet.
 func (m *SetupManager) Get() (*SetupState, error) {
 	if m == nil {
 		return &SetupState{ID: setupID, State: "idle"}, nil
@@ -148,6 +162,8 @@ func (m *SetupManager) Get() (*SetupState, error) {
 	return &st, nil
 }
 
+// Logs returns up to the last limit lines from LogPath, oldest of that
+// window first; nil if there's no log yet or limit <= 0.
 func (m *SetupManager) Logs(limit int) []string {
 	if m == nil || limit <= 0 {
 		return nil
@@ -171,6 +187,11 @@ func (m *SetupManager) Logs(limit int) []string {
 	return lines
 }
 
+// Start validates req and, if no setup is already running, launches the
+// matching enable-* script in the background, returning immediately with
+// the initial "running" SetupState — poll Get for progress. Returns an
+// error without starting anything if req is invalid, a setup is already
+// running, or scripts aren't Available.
 func (m *SetupManager) Start(req SetupRequest) (*SetupState, error) {
 	if m == nil || !m.Available() {
 		return nil, fmt.Errorf("storage setup scripts are not available on this host")

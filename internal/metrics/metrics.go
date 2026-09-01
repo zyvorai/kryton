@@ -25,6 +25,8 @@ import (
 	"sync/atomic"
 )
 
+// Metrics accumulates process-lifetime counters for the /metrics
+// endpoint. Safe for concurrent use.
 type Metrics struct {
 	requests atomic.Uint64
 	errors   atomic.Uint64
@@ -32,15 +34,23 @@ type Metrics struct {
 	ops      map[string]uint64
 }
 
+// New returns a zeroed Metrics ready to record against.
 func New() *Metrics { return &Metrics{ops: map[string]uint64{}} }
+
+// Request records one completed HTTP request, tallying it as an error
+// response too when errorResponse is true (status >= 400).
 func (m *Metrics) Request(errorResponse bool) {
 	m.requests.Add(1)
 	if errorResponse {
 		m.errors.Add(1)
 	}
 }
+
+// Operation increments the counter for one named machine lifecycle
+// operation (e.g. "create", "start", "snapshot-restore").
 func (m *Metrics) Operation(name string) { m.mu.Lock(); m.ops[name]++; m.mu.Unlock() }
 
+// Handler serves the accumulated counters in Prometheus text-exposition format.
 func (m *Metrics) Handler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 	fmt.Fprintf(w, "# HELP kryton_http_requests_total HTTP requests handled.\n# TYPE kryton_http_requests_total counter\nkryton_http_requests_total %d\n", m.requests.Load())

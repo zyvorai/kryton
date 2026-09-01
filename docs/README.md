@@ -17,6 +17,8 @@ Start here, then drill into the guide that matches your role.
 | **Go-live checklist** | [GA.md](GA.md) · [CUSTOMER.md](CUSTOMER.md) |
 | **Report a security issue** | [SECURITY.md](../SECURITY.md) |
 | **Contribute code** | [CONTRIBUTING.md](../CONTRIBUTING.md) |
+| **See what changed between versions** | [CHANGELOG.md](../CHANGELOG.md) · [RELEASE_NOTES.md](../RELEASE_NOTES.md) |
+| **Configure the Helm chart** | [deploy/helm/kryton/README.md](../deploy/helm/kryton/README.md) |
 
 ## Product site
 

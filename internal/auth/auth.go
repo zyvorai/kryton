@@ -32,6 +32,9 @@ import (
 	"strings"
 )
 
+// Role is a Kryton access level; Can and rank treat these as a strict
+// hierarchy Viewer < Operator < Admin, so holding Admin satisfies any
+// lower requirement too.
 type Role string
 
 const (
@@ -40,16 +43,21 @@ const (
 	Admin    Role = "admin"
 )
 
+// Principal is the caller identity resolved from a request by
+// Authenticator.Middleware, retrievable in a handler via FromContext.
 type Principal struct {
 	Name     string   `json:"name"`
 	Role     Role     `json:"role"`
-	Projects []string `json:"projects"`
+	Projects []string `json:"projects"` // "*" grants every project
 }
 
+// Config selects and configures an auth Mode ("disabled", "apikey", or "proxy") for New.
 type Config struct {
-	Mode            string
-	APIKeysFile     string
-	TrustProxy      bool
+	Mode        string
+	APIKeysFile string
+	TrustProxy  bool
+	// ProxySecretFile holds the shared secret the reverse proxy must
+	// present in X-Kryton-Proxy-Secret; required when Mode is "proxy".
 	ProxySecretFile string
 }
 
@@ -65,6 +73,9 @@ type keyFile struct {
 	Keys []keyRecord `json:"keys"`
 }
 
+// Authenticator implements one auth Mode for the lifetime of a krytond
+// process; build it once with New and install it via Middleware. It is
+// safe for concurrent use — all state is read-only after New returns.
 type Authenticator struct {
 	mode            string
 	trustProxy      bool
@@ -75,6 +86,10 @@ type Authenticator struct {
 
 type contextKey struct{}
 
+// New builds an Authenticator for cfg.Mode. For "apikey" it loads and
+// validates cfg.APIKeysFile (every key needs a sha256 digest — see
+// HashToken); for "proxy" it loads cfg.ProxySecretFile. Either read
+// failure, or an apikey file with zero valid keys, is returned as an error.
 func New(cfg Config) (*Authenticator, error) {
 	a := &Authenticator{mode: cfg.Mode, trustProxy: cfg.TrustProxy}
 	if cfg.Mode == "proxy" {
@@ -122,11 +137,17 @@ func New(cfg Config) (*Authenticator, error) {
 	return a, nil
 }
 
+// HashToken returns the hex-encoded SHA-256 digest of token — the value
+// that belongs in an API keys file's "sha256" field. Kryton never stores
+// or logs the raw token, only this digest.
 func HashToken(token string) string {
 	h := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(h[:])
 }
 
+// Middleware authenticates every request before it reaches next,
+// rejecting with 401 on failure and otherwise storing the resolved
+// Principal in the request context for FromContext to retrieve.
 func (a *Authenticator) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p, err := a.authenticate(r)
@@ -175,6 +196,8 @@ func (a *Authenticator) authenticate(r *http.Request) (Principal, error) {
 	}
 }
 
+// FromContext retrieves the Principal Middleware attached to ctx,
+// or the zero Principal (no role, no projects) if none was set.
 func FromContext(ctx context.Context) Principal {
 	if p, ok := ctx.Value(contextKey{}).(Principal); ok {
 		return p
@@ -182,6 +205,8 @@ func FromContext(ctx context.Context) Principal {
 	return Principal{}
 }
 
+// Can reports whether p holds at least the required Role and is scoped
+// to project (directly, or via a "*" wildcard project).
 func Can(p Principal, project string, required Role) bool {
 	if rank(p.Role) < rank(required) {
 		return false
@@ -194,6 +219,8 @@ func Can(p Principal, project string, required Role) bool {
 	return false
 }
 
+// FilterProjects returns the subset of configured that p can at least
+// view, preserving order — the list GET /api/v1/projects returns.
 func FilterProjects(p Principal, configured []string) []string {
 	var out []string
 	for _, project := range configured {

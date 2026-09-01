@@ -43,6 +43,11 @@ type Store struct {
 	cfg  Runtime
 }
 
+// NewStore builds a Store backed by path. With path empty it holds
+// initial in memory only (no persistence). Otherwise it creates path's
+// directory, and either seeds the file from initial (first run) or
+// merges initial with whatever non-empty fields are already on disk
+// (loaded file wins per field).
 func NewStore(path string, initial Runtime) (*Store, error) {
 	s := &Store{path: strings.TrimSpace(path), cfg: trimRuntime(initial)}
 	if s.path == "" {
@@ -69,12 +74,16 @@ func NewStore(path string, initial Runtime) (*Store, error) {
 	return s, nil
 }
 
+// Get returns the current in-memory Runtime settings.
 func (s *Store) Get() Runtime {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.cfg
 }
 
+// Save replaces the current Runtime settings and, if a path was
+// configured, persists them via a write-temp-then-rename to avoid
+// leaving a torn settings.json on crash.
 func (s *Store) Save(cfg Runtime) error {
 	cfg = trimRuntime(cfg)
 	s.mu.Lock()

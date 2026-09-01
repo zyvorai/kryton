@@ -44,6 +44,12 @@ import (
 	"github.com/zyvorai/kryton/internal/storage"
 )
 
+// Config is everything Server needs, assembled once at startup in
+// cmd/krytond from parsed environment configuration. The DefaultProjectEnv,
+// ImageNamespaceEnv, StorageConfigPath, and SettingsConfigPath fields carry
+// no runtime behavior of their own — they're echoed back read-only through
+// GET /api/v1/settings so operators can see which env vars/files are
+// currently authoritative for those values.
 type Config struct {
 	Provider           provider.Provider
 	Catalog            *catalog.Catalog
@@ -77,6 +83,10 @@ type Config struct {
 	CORSOrigins        []string
 }
 
+// Server is the assembled HTTP API: a single provider.Provider plus the
+// supporting stores (catalog, events, settings, storage, jobs) needed to
+// serve /api/v1. Construct it with New and call Handler to get the
+// http.Handler to serve.
 type Server struct {
 	p                  provider.Provider
 	catalog            *catalog.Catalog
@@ -123,6 +133,10 @@ type listResponse[T any] struct {
 type errorEnvelope struct {
 	Error APIError `json:"error"`
 }
+
+// APIError is the JSON shape of every non-2xx response body, wrapped in
+// an errorEnvelope under an "error" key. RequestID lets an operator
+// correlate a client-reported error with the matching server log line.
 type APIError struct {
 	Code      string `json:"code"`
 	Message   string `json:"message"`
@@ -130,6 +144,8 @@ type APIError struct {
 	RequestID string `json:"requestId,omitempty"`
 }
 
+// New assembles a Server from cfg. It does not start listening; call
+// Handler and pass the result to an http.Server.
 func New(cfg Config) *Server {
 	return &Server{
 		p: cfg.Provider, catalog: cfg.Catalog, events: cfg.Events, auth: cfg.Auth, metrics: cfg.Metrics, web: cfg.Web,
@@ -142,6 +158,11 @@ func New(cfg Config) *Server {
 	}
 }
 
+// Handler builds the full request pipeline: request-ID tagging, access
+// logging, CORS, security headers, panic recovery, then routing to the
+// public root endpoints, the auth-gated /api/v1 mux, or the embedded
+// static UI. Safe to call once at startup; the returned Handler is safe
+// for concurrent use by the HTTP server.
 func (s *Server) Handler() http.Handler {
 	apiMux := http.NewServeMux()
 	apiMux.HandleFunc("GET /api/v1/me", s.me)

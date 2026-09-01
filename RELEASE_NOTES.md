@@ -1,5 +1,7 @@
 # Kryton release notes
 
+Narrative release write-ups. For the flat, Keep-a-Changelog-style version index, see [CHANGELOG.md](CHANGELOG.md).
+
 ## 1.1.0
 
 ### Added

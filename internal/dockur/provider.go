@@ -56,6 +56,9 @@ var defaultVersions = map[string]string{
 	"windows-server-2016":   "2016",
 }
 
+// Config configures New; zero-valued fields fall back to defaults
+// (docker runtime, ~/.kryton/dockur data dir, 127.0.0.1, port bases
+// 18006/13389).
 type Config struct {
 	Runtime    string // docker (default) or podman
 	DataDir    string
@@ -65,10 +68,19 @@ type Config struct {
 	Catalog    VersionResolver
 }
 
+// VersionResolver maps a Kryton image ID to a dockur/windows VERSION
+// code; internal/catalog.Catalog implements it. When unset or when it
+// returns false, resolveVersion falls back to defaultVersions.
 type VersionResolver interface {
 	DockurVersion(imageID string) (string, bool)
 }
 
+// Provider implements provider.Provider by driving Docker/Podman Compose
+// per machine: each machine gets its own directory under DataDir holding
+// a rendered compose.yml, so container/volume state IS the machine's
+// state. Machine and port-allocation state is also mirrored to
+// state.json (see saveStateLocked/loadState) so a krytond restart
+// reattaches to already-running containers. Safe for concurrent use.
 type Provider struct {
 	mu         sync.Mutex
 	runtime    string
@@ -83,6 +95,8 @@ type Provider struct {
 
 type portPair struct{ HTTP, RDP int }
 
+// New builds a dockur Provider, creating cfg.DataDir if needed and
+// loading any previously persisted machine/port state from it.
 func New(cfg Config) (*Provider, error) {
 	runtime := strings.TrimSpace(cfg.Runtime)
 	if runtime == "" {
@@ -119,6 +133,9 @@ func New(cfg Config) (*Provider, error) {
 
 func (p *Provider) Name() string { return "dockur" }
 
+// ConsoleTarget implements provider.ConsoleResolver: it always returns a
+// "web" target proxying the dockur container's noVNC web viewer on its
+// allocated HTTP port, since dockur exposes no separate VNC socket.
 func (p *Provider) ConsoleTarget(_ context.Context, project, machineID string) (*provider.ConsoleTarget, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()

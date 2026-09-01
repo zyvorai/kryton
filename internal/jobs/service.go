@@ -33,6 +33,12 @@ import (
 	"github.com/zyvorai/kryton/internal/storage"
 )
 
+// Service synthesizes model.Job entries on demand from three otherwise
+// unrelated sources — storage setup, golden-image builds, and
+// in-progress machine provisioning — rather than storing jobs itself;
+// List/Get recompute the view fresh from each source's own state on
+// every call, so a Job's identity ("machine:{id}", "golden:{id}",
+// "storage:setup") is derived, not persisted.
 type Service struct {
 	Provider     provider.Provider
 	Golden       *golden.Manager
@@ -42,6 +48,11 @@ type Service struct {
 	DockurRun    string
 }
 
+// List returns every currently-relevant job — an active or
+// recently-finished storage setup, golden build, or machine
+// provisioning — across all configured Projects, newest UpdatedAt first.
+// Finished machines/builds age out of the list once no longer "recent";
+// see machineJob/goldenJob/storageSetupJob for the exact windows.
 func (s *Service) List(ctx context.Context) ([]model.Job, error) {
 	var out []model.Job
 	if s.StorageSetup != nil {
@@ -77,6 +88,8 @@ func (s *Service) List(ctx context.Context) ([]model.Job, error) {
 	return out, nil
 }
 
+// Get finds one job by its List-derived ID (e.g. "machine:{uuid}"),
+// returning os.ErrNotExist if it isn't currently in List's result.
 func (s *Service) Get(ctx context.Context, id string) (*model.Job, error) {
 	items, err := s.List(ctx)
 	if err != nil {

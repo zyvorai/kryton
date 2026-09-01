@@ -39,6 +39,9 @@ type Inventory struct {
 	ProjectRoot string
 }
 
+// Enrich returns every catalog image with Ready/Availability/StorageSource
+// set from live state: a golden-build artifact takes priority, then a CDI
+// DataSource, then provider-level always-available sources (dockur, demo).
 func (inv *Inventory) Enrich(ctx context.Context, cat *catalog.Catalog) []model.Image {
 	if cat == nil {
 		return nil

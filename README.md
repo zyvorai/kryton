@@ -242,7 +242,7 @@ internal/metrics/       Prometheus-style metrics
 internal/id/            Stable UUID helpers
 internal/connection/    Shared connection-test plumbing for Settings
 
-deploy/helm/kryton/     Production Helm chart
+deploy/helm/kryton/     Production Helm chart — see deploy/helm/kryton/README.md for values
 deploy/kubevirt/        Namespaces, clone RBAC, DataSource examples
 deploy/rook-ceph/       Block pool, StorageClass, VolumeSnapshotClass
 scripts/                Deploy, harden, golden-image, and KubeVirt bootstrap scripts
@@ -453,6 +453,9 @@ make fmt          # gofmt -w cmd internal
 | [API.md](docs/API.md) | HTTP contract + third-party integration |
 | [SECURITY.md](SECURITY.md) | Reporting & posture |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute |
+| [CHANGELOG.md](CHANGELOG.md) | Version-by-version change index |
+| [RELEASE_NOTES.md](RELEASE_NOTES.md) | Narrative release write-ups |
+| [deploy/helm/kryton/README.md](deploy/helm/kryton/README.md) | Helm chart values & overlays |
 
 ---
 

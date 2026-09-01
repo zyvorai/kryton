@@ -35,6 +35,10 @@ import (
 	"github.com/zyvorai/kryton/internal/id"
 )
 
+// Event is a CloudEvents 1.0 structured-mode envelope for one Kryton
+// lifecycle occurrence (e.g. "io.kryton.machine.created"). Subject is
+// typically "machines/{id}" or "snapshots/{id}"; Data carries the
+// event-specific payload (project, machineId, name, state, ...).
 type Event struct {
 	SpecVersion     string         `json:"specversion"`
 	ID              string         `json:"id"`
@@ -46,6 +50,10 @@ type Event struct {
 	Data            map[string]any `json:"data,omitempty"`
 }
 
+// Bus is Kryton's event hub: an in-memory ring buffer of recent Events,
+// fanned out live to any number of Subscribe channels, optionally backed
+// by an append-only JSONL file (for history that survives restarts) and
+// an outbound webhook. Safe for concurrent use.
 type Bus struct {
 	mu            sync.RWMutex
 	history       []Event
@@ -58,6 +66,10 @@ type Bus struct {
 	log           *slog.Logger
 }
 
+// New builds a Bus keeping at most maxHistory events in memory
+// (defaulting to 500 if less than 1). If filePath is non-empty it is
+// opened as the persistent JSONL store and its existing content is
+// loaded as initial history; an empty webhook disables webhook delivery.
 func New(maxHistory int, webhook, webhookSecret, filePath string, log *slog.Logger) (*Bus, error) {
 	if maxHistory < 1 {
 		maxHistory = 500
@@ -81,6 +93,10 @@ func New(maxHistory int, webhook, webhookSecret, filePath string, log *slog.Logg
 	return b, nil
 }
 
+// Publish records a new Event, delivering it to history, live
+// subscribers, the persistent store (if configured), and the webhook (if
+// configured) — in that order, best-effort: a persistence or webhook
+// failure is logged but never returned to the caller.
 func (b *Bus) Publish(ctx context.Context, eventType, subject string, data map[string]any) Event {
 	e := Event{SpecVersion: "1.0", ID: id.New(), Source: "kryton://control-plane", Type: eventType, Subject: subject, Time: time.Now().UTC(), DataContentType: "application/json", Data: data}
 	b.mu.Lock()
@@ -106,12 +122,15 @@ func (b *Bus) Publish(ctx context.Context, eventType, subject string, data map[s
 	return e
 }
 
+// SetWebhookURL updates the webhook target live; pass "" to disable delivery.
 func (b *Bus) SetWebhookURL(url string) {
 	b.mu.Lock()
 	b.webhook = strings.TrimSpace(url)
 	b.mu.Unlock()
 }
 
+// List returns the most recent events, newest first, capped at limit
+// (limit <= 0 or larger than history returns everything available).
 func (b *Bus) List(limit int) []Event {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -123,6 +142,11 @@ func (b *Bus) List(limit int) []Event {
 	return out
 }
 
+// Subscribe registers a new live listener and returns its channel plus a
+// cancel func the caller must invoke exactly once (e.g. via defer) to
+// unregister and close the channel — typically on SSE client disconnect.
+// The channel is buffered but Publish drops events for a subscriber that
+// isn't keeping up rather than blocking.
 func (b *Bus) Subscribe() (<-chan Event, func()) {
 	ch := make(chan Event, 32)
 	b.mu.Lock()

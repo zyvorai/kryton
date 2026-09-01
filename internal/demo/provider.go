@@ -30,13 +30,17 @@ import (
 	"github.com/zyvorai/kryton/internal/provider"
 )
 
+// Provider is an in-memory provider.Provider implementation: machines
+// and snapshots live only in process memory, keyed by project, and are
+// lost on restart. Safe for concurrent use.
 type Provider struct {
 	mu        sync.RWMutex
 	machines  map[string]map[string]model.Machine
 	snapshots map[string][]model.Snapshot
-	nextIP    int
+	nextIP    int // next fabricated IPAddresses octet, e.g. 10.44.0.N
 }
 
+// New returns an empty demo Provider ready to use immediately — no setup required.
 func New() *Provider {
 	return &Provider{machines: map[string]map[string]model.Machine{}, snapshots: map[string][]model.Snapshot{}, nextIP: 20}
 }

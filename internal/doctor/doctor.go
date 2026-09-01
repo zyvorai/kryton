@@ -35,6 +35,8 @@ import (
 	"github.com/zyvorai/kryton/internal/provider"
 )
 
+// Input supplies Run with the live context it needs; KubeClient nil
+// degrades the kubevirt-specific checks to warnings instead of failures.
 type Input struct {
 	Provider        provider.Provider
 	Catalog         *catalog.Catalog
@@ -48,6 +50,11 @@ type Input struct {
 	StorageClass    string
 }
 
+// Run executes the common checks (auth, projects, catalog, provider
+// health) plus whichever provider-specific checks apply to in.Provider's
+// name (dockur: runtime/compose/KVM/data-dir; kubevirt: DataSources,
+// namespaces, snapshot CRDs, StorageClass pairing), returning a report
+// that is Healthy only if every finding is non-fail.
 func Run(ctx context.Context, in Input) model.DoctorReport {
 	report := model.DoctorReport{Provider: in.Provider.Name(), Findings: []model.DoctorFinding{}}
 	add := func(f model.DoctorFinding) { report.Findings = append(report.Findings, f) }

@@ -27,6 +27,8 @@ import (
 	"github.com/zyvorai/kryton/internal/provider"
 )
 
+// TTL periodically expires machines whose Spec.TTLMinutes deadline has
+// passed. Zero-value Interval defaults to 30s in Run.
 type TTL struct {
 	Provider provider.Provider
 	Projects []string
@@ -35,6 +37,10 @@ type TTL struct {
 	Interval time.Duration
 }
 
+// Run sweeps every configured project once immediately, then on every
+// tick of Interval, until ctx is canceled. Intended to run for the
+// lifetime of the krytond process in its own goroutine; blocks until
+// ctx.Done().
 func (r TTL) Run(ctx context.Context) {
 	if r.Interval <= 0 {
 		r.Interval = 30 * time.Second

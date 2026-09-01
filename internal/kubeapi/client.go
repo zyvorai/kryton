@@ -34,6 +34,9 @@ import (
 	"time"
 )
 
+// Config points New at a Kubernetes API server. Leaving Endpoint empty
+// makes New try in-cluster discovery (KUBERNETES_SERVICE_HOST/_PORT);
+// BearerToken takes priority over TokenFile when both are set.
 type Config struct {
 	Endpoint           string
 	BearerToken        string
@@ -44,12 +47,18 @@ type Config struct {
 	InsecureSkipVerify bool
 }
 
+// Client is a thin, dependency-free Kubernetes API client: one base URL,
+// one bearer token, one http.Client. Safe for concurrent use.
 type Client struct {
 	base  *url.URL
 	token string
 	http  *http.Client
 }
 
+// APIError is returned by JSON for any non-2xx Kubernetes API response,
+// carrying the raw StatusCode plus the decoded Status.reason/message
+// when the body was a Kubernetes Status object. Use IsNotFound/IsConflict
+// to test for the common cases.
 type APIError struct {
 	StatusCode int
 	Reason     string
@@ -63,6 +72,11 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("kubernetes API returned HTTP %d", e.StatusCode)
 }
 
+// New builds a Client for cfg. With cfg.Endpoint empty it falls back to
+// in-cluster discovery via the KUBERNETES_SERVICE_HOST/_PORT_HTTPS
+// environment, returning an error if neither is set. TLS client
+// certificates and a custom CA are loaded eagerly, so a bad cert/key/CA
+// path fails here rather than on the first request.
 func New(cfg Config) (*Client, error) {
 	endpoint := strings.TrimRight(strings.TrimSpace(cfg.Endpoint), "/")
 	if endpoint == "" {
@@ -117,6 +131,8 @@ func New(cfg Config) (*Client, error) {
 	return &Client{base: base, token: token, http: &http.Client{Transport: transport, Timeout: 20 * time.Second}}, nil
 }
 
+// Endpoint returns the API server base URL c talks to, or "" for a nil
+// or zero-value Client — used to display the configured cluster in Settings.
 func (c *Client) Endpoint() string {
 	if c == nil || c.base == nil {
 		return ""
@@ -124,11 +140,17 @@ func (c *Client) Endpoint() string {
 	return c.base.String()
 }
 
+// Health reports whether the API server responds to GET /version.
 func (c *Client) Health(ctx context.Context) error {
 	var out map[string]any
 	return c.JSON(ctx, http.MethodGet, "/version", "", nil, &out)
 }
 
+// JSON performs one Kubernetes API request: path may include a query
+// string (split automatically), body — if non-nil — is JSON-encoded as
+// the request payload (contentType defaults to application/json), and a
+// non-nil out receives the JSON-decoded response body. A non-2xx status
+// is returned as *APIError rather than a decode attempt.
 func (c *Client) JSON(ctx context.Context, method, path, contentType string, body, out any) error {
 	var r io.Reader
 	if body != nil {
@@ -184,10 +206,13 @@ func (c *Client) JSON(ctx context.Context, method, path, contentType string, bod
 	return nil
 }
 
+// IsNotFound reports whether err is an *APIError for HTTP 404.
 func IsNotFound(err error) bool {
 	var e *APIError
 	return errors.As(err, &e) && e.StatusCode == http.StatusNotFound
 }
+
+// IsConflict reports whether err is an *APIError for HTTP 409.
 func IsConflict(err error) bool {
 	var e *APIError
 	return errors.As(err, &e) && e.StatusCode == http.StatusConflict

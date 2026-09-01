@@ -28,6 +28,9 @@ import (
 	"time"
 )
 
+// MachineState is the provider-neutral lifecycle state of a Machine.
+// Not every provider reaches every state (e.g. only kubevirt uses
+// StateMigrating and StatePaused).
 type MachineState string
 
 const (
@@ -44,16 +47,21 @@ const (
 	StateUnknown      MachineState = "unknown"
 )
 
+// ComputeSpec is the requested CPU/memory shape of a machine.
 type ComputeSpec struct {
 	CPU       int `json:"cpu"`
 	MemoryMiB int `json:"memoryMiB"`
 }
 
+// DiskSpec is the requested primary disk for a machine.
 type DiskSpec struct {
-	SizeGiB      int    `json:"sizeGiB"`
+	SizeGiB int `json:"sizeGiB"`
+	// StorageClass overrides the provider/cluster default StorageClass
+	// (kubevirt only; ignored by demo and dockur).
 	StorageClass string `json:"storageClass,omitempty"`
 }
 
+// NetworkSpec selects a provider-specific network attachment.
 type NetworkSpec struct {
 	NetworkID string `json:"networkId,omitempty"`
 }
@@ -81,23 +89,33 @@ type DockurOptions struct {
 	ExtraDisksGiB []int  `json:"extraDisksGiB,omitempty"`
 }
 
+// MachineSpec is the caller-supplied desired state for Provider.Create.
+// It is echoed back on Machine.Spec so the original request survives
+// provider translation (e.g. into a KubeVirt VirtualMachine).
 type MachineSpec struct {
-	Name       string            `json:"name"`
-	Image      string            `json:"image"`
-	Compute    ComputeSpec       `json:"compute"`
-	Disk       DiskSpec          `json:"disk"`
-	Network    NetworkSpec       `json:"network,omitempty"`
+	Name    string      `json:"name"`
+	Image   string      `json:"image"`
+	Compute ComputeSpec `json:"compute"`
+	Disk    DiskSpec    `json:"disk"`
+	Network NetworkSpec `json:"network,omitempty"`
+	// TTLMinutes schedules automatic deletion by internal/reconciler; 0 means no expiry.
 	TTLMinutes int               `json:"ttlMinutes,omitempty"`
 	Labels     map[string]string `json:"labels,omitempty"`
-	Dockur     *DockurOptions    `json:"dockur,omitempty"`
+	// Dockur carries options only the dockur provider consumes; nil for demo/kubevirt.
+	Dockur *DockurOptions `json:"dockur,omitempty"`
 }
 
+// ProviderRef records where a Machine actually lives in the backing
+// system, so operators can cross-reference it (e.g. `kubectl -n
+// Namespace get vm Name`) without Kryton exposing that as the primary ID.
 type ProviderRef struct {
 	Provider  string `json:"provider"`
 	Namespace string `json:"namespace,omitempty"`
 	Name      string `json:"name"`
 }
 
+// Condition is a Kubernetes-style status condition surfaced from the
+// backing provider (kubevirt VirtualMachine/VMI conditions today).
 type Condition struct {
 	Type    string `json:"type"`
 	Status  string `json:"status"`
@@ -105,26 +123,33 @@ type Condition struct {
 	Message string `json:"message,omitempty"`
 }
 
+// Machine is the provider-neutral view of a Windows workload returned by
+// every Provider method. ID is a stable UUID independent of ProviderRef,
+// so callers never need to know the backend's own naming.
 type Machine struct {
-	ID              string       `json:"id"`
-	Project         string       `json:"project"`
-	Provider        string       `json:"provider"`
-	State           MachineState `json:"state"`
-	Spec            MachineSpec  `json:"spec"`
-	ProviderRef     ProviderRef  `json:"providerRef"`
-	IPAddresses     []string     `json:"ipAddresses,omitempty"`
-	ConsoleURL      string       `json:"consoleUrl,omitempty"`
-	RdpHost         string       `json:"rdpHost,omitempty"`
-	RdpPort         int          `json:"rdpPort,omitempty"`
-	RdpUsername     string       `json:"rdpUsername,omitempty"`
-	ProgressPercent *int         `json:"progressPercent,omitempty"`
-	Message         string       `json:"message,omitempty"`
-	Conditions      []Condition  `json:"conditions,omitempty"`
-	CreatedAt       time.Time    `json:"createdAt"`
-	UpdatedAt       time.Time    `json:"updatedAt"`
-	ExpiresAt       *time.Time   `json:"expiresAt,omitempty"`
+	ID          string       `json:"id"`
+	Project     string       `json:"project"`
+	Provider    string       `json:"provider"`
+	State       MachineState `json:"state"`
+	Spec        MachineSpec  `json:"spec"`
+	ProviderRef ProviderRef  `json:"providerRef"`
+	IPAddresses []string     `json:"ipAddresses,omitempty"`
+	ConsoleURL  string       `json:"consoleUrl,omitempty"`
+	RdpHost     string       `json:"rdpHost,omitempty"`
+	RdpPort     int          `json:"rdpPort,omitempty"`
+	RdpUsername string       `json:"rdpUsername,omitempty"`
+	// ProgressPercent and Message are populated during install/provisioning
+	// by providers that support it (dockur, demo); nil/empty once running.
+	ProgressPercent *int        `json:"progressPercent,omitempty"`
+	Message         string      `json:"message,omitempty"`
+	Conditions      []Condition `json:"conditions,omitempty"`
+	CreatedAt       time.Time   `json:"createdAt"`
+	UpdatedAt       time.Time   `json:"updatedAt"`
+	// ExpiresAt is derived from Spec.TTLMinutes; nil means the machine never expires.
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
 }
 
+// Snapshot is a point-in-time disk capture of a Machine.
 type Snapshot struct {
 	ID        string    `json:"id"`
 	Project   string    `json:"project"`
@@ -135,24 +160,31 @@ type Snapshot struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
+// Image describes one entry in the deployable Windows image catalog
+// (internal/catalog), optionally enriched with live storage state by
+// internal/images.
 type Image struct {
-	ID               string   `json:"id"`
-	Name             string   `json:"name"`
-	Version          string   `json:"version"`
-	Family           string   `json:"family"`
-	Description      string   `json:"description"`
-	MinCPU           int      `json:"minCpu"`
-	MinMemoryMiB     int      `json:"minMemoryMiB"`
-	DefaultDiskGB    int      `json:"defaultDiskGiB"`
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Version       string `json:"version"`
+	Family        string `json:"family"`
+	Description   string `json:"description"`
+	MinCPU        int    `json:"minCpu"`
+	MinMemoryMiB  int    `json:"minMemoryMiB"`
+	DefaultDiskGB int    `json:"defaultDiskGiB"`
+	// DockurVersion is the dockur/windows VERSION env value this image maps to; empty for kubevirt-only images.
 	DockurVersion    string   `json:"dockurVersion,omitempty"`
 	Tags             []string `json:"tags,omitempty"`
 	Availability     string   `json:"availability,omitempty"`  // stored | on-demand | catalog
 	StorageSource    string   `json:"storageSource,omitempty"` // cdi | dockur | golden | demo
 	StorageNamespace string   `json:"storageNamespace,omitempty"`
 	StoragePath      string   `json:"storagePath,omitempty"`
-	Ready            bool     `json:"ready"`
+	// Ready is true once the underlying disk/DataSource is actually usable for Create.
+	Ready bool `json:"ready"`
 }
 
+// Capabilities advertises which optional features a Provider supports,
+// so the UI/CLI can hide controls (e.g. Snapshot) the active backend can't do.
 type Capabilities struct {
 	Provider      string `json:"provider"`
 	Snapshots     bool   `json:"snapshots"`
@@ -163,6 +195,7 @@ type Capabilities struct {
 	GoldenImages  bool   `json:"goldenImages"`
 }
 
+// DoctorFinding is one check result from internal/doctor.
 type DoctorFinding struct {
 	Check   string `json:"check"`
 	Status  string `json:"status"` // pass | warn | fail
@@ -170,12 +203,14 @@ type DoctorFinding struct {
 	Hint    string `json:"hint,omitempty"`
 }
 
+// DoctorReport is the aggregate result of `krytonctl doctor` / GET /api/v1/doctor.
 type DoctorReport struct {
 	Provider string          `json:"provider"`
 	Healthy  bool            `json:"healthy"`
 	Findings []DoctorFinding `json:"findings"`
 }
 
+// Summary is the per-project machine/resource rollup shown on the UI Overview page.
 type Summary struct {
 	Project   string `json:"project"`
 	Provider  string `json:"provider"`
@@ -192,6 +227,9 @@ var projectLabel = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
 var labelKey = regexp.MustCompile(`^[A-Za-z0-9_.:/-]{1,128}$`)
 var labelValue = regexp.MustCompile(`^[A-Za-z0-9_.:/ -]{0,256}$`)
 
+// ValidateProject reports whether p is a valid Kryton project name
+// (DNS-style label, 1-63 chars); providers use this as their
+// namespace/tenant key.
 func ValidateProject(p string) error {
 	if len(p) < 1 || len(p) > 63 || !projectLabel.MatchString(p) {
 		return errors.New("project must be a DNS-style label up to 63 characters")
@@ -199,6 +237,9 @@ func ValidateProject(p string) error {
 	return nil
 }
 
+// ValidateMachineSpec checks a MachineSpec against Kryton's size/format
+// limits before it reaches a Provider, returning every violation found
+// joined into a single error rather than failing on the first one.
 func ValidateMachineSpec(s MachineSpec) error {
 	var problems []string
 	if len(s.Name) < 1 || len(s.Name) > 63 || !dnsLabel.MatchString(s.Name) {

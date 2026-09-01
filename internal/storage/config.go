@@ -86,6 +86,9 @@ type Store struct {
 	cfg  Config
 }
 
+// NewStore builds a Store backed by path, seeding it with initial (the
+// KRYTON_STORAGE_CLASS env default) when the file doesn't exist yet.
+// With path empty, settings are held in memory only.
 func NewStore(path string, initial string) (*Store, error) {
 	s := &Store{path: strings.TrimSpace(path), cfg: Config{StorageClass: strings.TrimSpace(initial)}}
 	if s.path == "" {
@@ -114,12 +117,15 @@ func NewStore(path string, initial string) (*Store, error) {
 	return s, nil
 }
 
+// Get returns the current default-StorageClass Config.
 func (s *Store) Get() Config {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.cfg
 }
 
+// Save replaces the current Config and, if a path was configured,
+// persists it via write-temp-then-rename to avoid a torn file on crash.
 func (s *Store) Save(cfg Config) error {
 	cfg.StorageClass = strings.TrimSpace(cfg.StorageClass)
 	s.mu.Lock()

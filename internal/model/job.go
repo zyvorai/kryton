@@ -16,6 +16,7 @@ package model
 
 import "time"
 
+// JobStepState is the status of one JobStep within a Job.
 type JobStepState string
 
 const (
@@ -25,6 +26,7 @@ const (
 	JobStepFailed  JobStepState = "failed"
 )
 
+// JobState is the overall status of a Job.
 type JobState string
 
 const (
@@ -33,6 +35,8 @@ const (
 	JobFailed    JobState = "failed"
 )
 
+// JobStep is one named stage within a Job's progress (e.g. "download",
+// "sysprep", "import"), shown as a checklist in the UI.
 type JobStep struct {
 	ID     string       `json:"id"`
 	Label  string       `json:"label"`
@@ -40,12 +44,17 @@ type JobStep struct {
 	Detail string       `json:"detail,omitempty"`
 }
 
+// JobLogLine is one line of a Job's streamed log output.
 type JobLogLine struct {
 	Time    time.Time `json:"time"`
 	Level   string    `json:"level"` // info | ok | warn | err
 	Message string    `json:"message"`
 }
 
+// Job is internal/jobs' unified view over long-running operations —
+// today, machine provisioning (dockur install progress) and golden-image
+// builds/bootstraps — surfaced together at GET /api/v1/jobs so the UI
+// has one activity feed regardless of kind.
 type Job struct {
 	ID              string       `json:"id"`
 	Kind            string       `json:"kind"` // machine | golden

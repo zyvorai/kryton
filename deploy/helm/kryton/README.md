@@ -1,0 +1,65 @@
+# Kryton Helm chart
+
+Deploys `krytond` to Kubernetes with the `kubevirt` provider — the production path described in [docs/DEPLOYMENT.md](../../../docs/DEPLOYMENT.md) and [docs/ARCHITECTURE.md](../../../docs/ARCHITECTURE.md).
+
+```bash
+helm upgrade --install kryton ./deploy/helm/kryton -n kryton --create-namespace \
+  -f deploy/helm/kryton/values-customer.yaml
+```
+
+## Values files
+
+| File | Use case |
+|------|----------|
+| [`values.yaml`](values.yaml) | Chart defaults — starting point, no overlay needed for reference |
+| [`values-lab.yaml`](values-lab.yaml) | Shared lab/demo cluster: auth **disabled**, NodePort `30088`, local image tag |
+| [`values-customer.yaml`](values-customer.yaml) | Production: `apikey` auth, ingress + TLS, `rook-ceph-block` storage |
+| [`values-rook-ceph.yaml`](values-rook-ceph.yaml) | Overlay-only: point `storageClass` at Rook Ceph RBD (snapshots + clones) |
+| [`values-longhorn.yaml`](values-longhorn.yaml) | Overlay-only: point `storageClass` at Longhorn CSI (lab snapshots) |
+
+The two storage overlays are meant to be layered on top of `values.yaml` or `values-customer.yaml` with `-f`, not used alone — see [docs/STORAGE.md](../../../docs/STORAGE.md) for the Rook Ceph vs. Longhorn tradeoffs and `scripts/enable-rook-ceph.sh` / `scripts/enable-kubevirt-snapshots.sh` for installing the storage layer itself.
+
+## Key values
+
+| Key | Default | Notes |
+|-----|---------|-------|
+| `provider` | `kubevirt` | The chart only wires up the KubeVirt provider; `demo`/`dockur` are for `make demo` / bare-metal labs, not Helm |
+| `projects` / `defaultProject` | `[default]` / `default` | Maps to `KRYTON_PROJECTS` / `KRYTON_DEFAULT_PROJECT` — one KubeVirt namespace per project |
+| `namespacePrefix` | `""` | Prefixes the per-project namespace Kryton creates/manages |
+| `imageNamespace` | `kryton-images` | Namespace holding operator-managed golden-image `DataSource` objects |
+| `storageClass` | `""` (cluster default) | PVC StorageClass for new VM disks; set via overlay or `KRYTON_STORAGE_CLASS` |
+| `auth.mode` | `apikey` | `disabled` · `apikey` · `proxy` — chart **requires** `auth.existingSecret` unless `disabled` |
+| `auth.existingSecret` | `kryton-auth` | Secret holding `keys.json` (apikey) or a proxy shared secret; create it before `helm install` (see below) |
+| `auth.trustProxy` / `auth.allowInsecure` | `false` | Proxy-auth mode and lab TLS-skip escape hatches — leave both `false` in production |
+| `eventWebhookURL` | `""` | Optional CloudEvents webhook sink |
+| `corsOrigins` | `[]` | Browser origins allowed to call the API cross-origin (portals, dashboards) |
+| `reconcileInterval` | `30s` | TTL-expiry sweep interval |
+| `ingress.*` | disabled | Standard `networking.k8s.io/v1` Ingress; only used when `ingress.enabled: true` |
+| `service.type` / `service.nodePort` | `ClusterIP` / `0` | Set `NodePort` + a port for lab access without an Ingress controller |
+| `rbac.clusterWide` | `true` | `true` → ClusterRole (multi-namespace/multi-project); `false` → namespaced Role scoped to the release namespace |
+| `images` | 3 sample entries | Static catalog entries (`KRYTON_IMAGES_FILE`) describing selectable images in the UI/CLI — the backing `DataSource` still has to exist in `imageNamespace`, see [docs/GOLDEN-IMAGES.md](../../../docs/GOLDEN-IMAGES.md) |
+| `resources` / `podSecurityContext` / `containerSecurityContext` | hardened defaults | Non-root, read-only rootfs, all capabilities dropped |
+| `networkPolicy.enabled` | `false` | When on, restricts ingress to port 8080 and allows all egress (KubeVirt/API-server access) |
+
+## Auth secret
+
+`auth.existingSecret` (default `kryton-auth`) must exist in the release namespace before install whenever `auth.mode` is not `disabled` — the chart does not create it. For `apikey` mode:
+
+```bash
+TOKEN=$(krytonctl generate-token)
+HASH=$(krytonctl hash-token "$TOKEN")
+kubectl -n kryton create secret generic kryton-auth \
+  --from-literal=keys.json="{\"keys\":[{\"name\":\"ops\",\"sha256\":\"$HASH\",\"role\":\"admin\",\"projects\":[\"*\"]}]}"
+```
+
+For `proxy` mode, the same secret instead holds a proxy shared-secret file — see [docs/API.md](../../../docs/API.md).
+
+## RBAC
+
+The chart grants `krytond` `get/list/watch` on KubeVirt `VirtualMachines`, `VirtualMachineInstances`, snapshot/restore CRDs, `StorageClasses`, `VolumeSnapshotClasses`, and CDI `DataSources`, plus `create` on `namespaces` and lifecycle verbs on VMs/snapshots. `rbac.clusterWide: false` swaps the `ClusterRole`/`ClusterRoleBinding` for a namespaced `Role`/`RoleBinding` — use that only when every project's namespace equals the release namespace.
+
+## What the chart does not manage
+
+- KubeVirt/CDI installation itself — see [docs/KUBEVIRT.md](../../../docs/KUBEVIRT.md) and `scripts/setup-kubevirt-production.sh`.
+- Golden-image creation — see [docs/GOLDEN-IMAGES.md](../../../docs/GOLDEN-IMAGES.md).
+- The storage layer (Rook Ceph / Longhorn install) — see `deploy/rook-ceph/` and [docs/STORAGE.md](../../../docs/STORAGE.md).

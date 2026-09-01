@@ -45,6 +45,9 @@ const (
 	expiresAnno  = "kryton.io/expires-at"
 )
 
+// Config supplies New with the Kubernetes client and per-provider
+// defaults; ImageNamespace and StorageClass can be changed afterward via
+// SetImageNamespace/SetStorageClass (Settings → Storage does this at runtime).
 type Config struct {
 	Client          *kubeapi.Client
 	NamespacePrefix string
@@ -52,6 +55,10 @@ type Config struct {
 	StorageClass    string
 }
 
+// Provider implements provider.Provider on top of KubeVirt/CDI. It holds
+// no machine inventory itself — Kubernetes is the source of truth — only
+// the mutable ImageNamespace/StorageClass defaults, guarded by mu since
+// they can be updated live via the Settings API. Safe for concurrent use.
 type Provider struct {
 	client                          *kubeapi.Client
 	namespacePrefix, imageNamespace string
@@ -59,30 +66,41 @@ type Provider struct {
 	storageClass                    string
 }
 
+// New builds a kubevirt Provider from cfg. It performs no I/O; namespaces
+// and RBAC are created lazily on first Create per project.
 func New(cfg Config) *Provider {
 	return &Provider{client: cfg.Client, namespacePrefix: cfg.NamespacePrefix, imageNamespace: cfg.ImageNamespace, storageClass: cfg.StorageClass}
 }
 func (p *Provider) Name() string                    { return "kubevirt" }
 func (p *Provider) namespace(project string) string { return p.namespacePrefix + project }
 
+// StorageClass returns the StorageClass new VM disks currently request;
+// "" means the cluster default StorageClass is used.
 func (p *Provider) StorageClass() string {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.storageClass
 }
 
+// SetStorageClass changes the default StorageClass for future Create
+// calls; it does not affect existing machines. Safe to call concurrently
+// with in-flight requests.
 func (p *Provider) SetStorageClass(name string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.storageClass = strings.TrimSpace(name)
 }
 
+// SetImageNamespace changes which namespace Create clones golden-image
+// DataSources from for future requests.
 func (p *Provider) SetImageNamespace(ns string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.imageNamespace = strings.TrimSpace(ns)
 }
 
+// ImageNamespace returns the namespace Create currently clones
+// golden-image DataSources from.
 func (p *Provider) ImageNamespace() string {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
@@ -101,6 +119,10 @@ func (p *Provider) Capabilities(context.Context) (model.Capabilities, error) {
 	return model.Capabilities{Provider: p.Name(), Snapshots: true, Networks: true, TTL: true, LiveMigration: false, Console: true}, nil
 }
 
+// ConsoleTarget implements provider.ConsoleResolver: it returns a "vnc"
+// target for the machine's VirtualMachineInstance, but only once that
+// VMI's phase is Running — otherwise it returns a descriptive error
+// (e.g. still cloning the disk) rather than a target the caller can't use yet.
 func (p *Provider) ConsoleTarget(ctx context.Context, project, machineID string) (*provider.ConsoleTarget, error) {
 	m, err := p.Get(ctx, project, machineID)
 	if err != nil {
