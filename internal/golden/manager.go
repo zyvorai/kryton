@@ -130,10 +130,12 @@ func defaultVersions() map[string]string {
 func (m *Manager) BaseDir() string { return m.baseDir }
 
 // Available reports whether this host can actually run a golden build:
-// docker on PATH, /dev/kvm present, and the build script configured and present.
+// docker or podman on PATH, /dev/kvm present, and the build script configured and present.
 func (m *Manager) Available() error {
 	if _, err := exec.LookPath("docker"); err != nil {
-		return fmt.Errorf("docker not found")
+		if _, err2 := exec.LookPath("podman"); err2 != nil {
+			return fmt.Errorf("docker/podman not found")
+		}
 	}
 	if _, err := os.Stat("/dev/kvm"); err != nil {
 		return fmt.Errorf("/dev/kvm not available")

@@ -8,19 +8,32 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 VERSION="${VERSION:-11e}"
-IMAGE_ID="${KRYTON_IMAGE_ID:-windows-11-enterprise}"
+# Prefer explicit IMAGE_ID (API/parent re-exec), then KRYTON_IMAGE_ID, then default.
+# Do not clobber a parent-exported IMAGE_ID with the catalog default.
+IMAGE_ID="${IMAGE_ID:-${KRYTON_IMAGE_ID:-windows-11-enterprise}}"
 BUILD_ID="${BUILD_ID:-}"
 WORKDIR="${WORKDIR:-}"
 OUT="${OUT:-}"
 OEM_DIR="${OEM_DIR:-${PROJECT_DIR}/deploy/dockur/oem}"
 DOCKUR_IMAGE="${DOCKUR_IMAGE:-docker.io/dockurr/windows:latest}"
+# Prefer docker when present; lab hosts often only have podman.
+if [[ -z "${CONTAINER_CLI:-}" ]]; then
+  if command -v docker >/dev/null 2>&1; then
+    CONTAINER_CLI=docker
+  elif command -v podman >/dev/null 2>&1; then
+    CONTAINER_CLI=podman
+  else
+    CONTAINER_CLI=docker
+  fi
+fi
 RAM_SIZE="${RAM_SIZE:-8G}"
 CPU_CORES="${CPU_CORES:-4}"
 DISK_SIZE="${DISK_SIZE:-80G}"
 PUBLIC_HOST="${PUBLIC_HOST:-127.0.0.1}"
 CONSOLE_PORT="${CONSOLE_PORT:-}"
 AUTO=0
-FINALIZE=0
+# Preserve FINALIZE=1 from parent re-exec / env — never force 0 here.
+FINALIZE="${FINALIZE:-0}"
 NAME=""
 
 usage() {
@@ -144,7 +157,7 @@ if [[ "${FINALIZE:-0}" == "1" ]]; then
   need qemu-img
   NAME="${NAME:-kryton-golden-${BUILD_ID}}"
   write_status "capturing" "convert" 88 "Stopping builder and capturing qcow2" "" "${OUT}"
-  docker stop -t 180 "${NAME}" >/dev/null 2>&1 || true
+  ${CONTAINER_CLI} stop -t 180 "${NAME}" >/dev/null 2>&1 || true
 
   DISK="${DISK:-}"
   if [[ -z "${DISK}" ]]; then
@@ -165,7 +178,7 @@ if [[ "${FINALIZE:-0}" == "1" ]]; then
   exit 0
 fi
 
-need docker
+need "${CONTAINER_CLI}"
 test -e /dev/kvm || { write_status "failed" "prepare" 0 "/dev/kvm required" "" "" "no kvm"; echo "/dev/kvm required" >&2; exit 1; }
 test -d "${OEM_DIR}" || { write_status "failed" "prepare" 0 "OEM dir missing: ${OEM_DIR}" "" "" "oem missing"; exit 1; }
 
@@ -175,8 +188,13 @@ CONSOLE_URL="http://${PUBLIC_HOST}:${CONSOLE_PORT}/"
 
 write_status "starting" "pull" 8 "Starting dockur/windows (VERSION=${VERSION})" "${CONSOLE_URL}"
 
-docker rm -f "${NAME}" >/dev/null 2>&1 || true
-docker run -d --name "${NAME}" \
+${CONTAINER_CLI} rm -f "${NAME}" >/dev/null 2>&1 || true
+PODMAN_EXTRA=()
+if [[ "${CONTAINER_CLI}" == "podman" ]]; then
+  # Rootless podman often sees /dev/kvm as unwriteable without privileged + keep-groups.
+  PODMAN_EXTRA+=(--privileged --group-add=keep-groups --security-opt=label=disable)
+fi
+${CONTAINER_CLI} run -d --name "${NAME}" \
   -e VERSION="${VERSION}" \
   -e RAM_SIZE="${RAM_SIZE}" \
   -e CPU_CORES="${CPU_CORES}" \
@@ -187,6 +205,7 @@ docker run -d --name "${NAME}" \
   --device=/dev/kvm \
   --device=/dev/net/tun \
   --cap-add NET_ADMIN \
+  "${PODMAN_EXTRA[@]}" \
   -v "${STORAGE}:/storage" \
   -v "${OEM_DIR}:/oem" \
   --stop-timeout 180 \
@@ -215,7 +234,7 @@ fi
 
 echo "→ Watching dockur install (auto mode). Console: ${CONSOLE_URL}"
 CONSOLE_UP=0
-while docker inspect -f '{{.State.Running}}' "${NAME}" 2>/dev/null | grep -q true; do
+while ${CONTAINER_CLI} inspect -f '{{.State.Running}}' "${NAME}" 2>/dev/null | grep -q true; do
   if curl -fsS --max-time 2 "${CONSOLE_URL}" >/dev/null 2>&1; then
     if [ "${CONSOLE_UP}" -eq 0 ]; then
       CONSOLE_UP=1
@@ -229,13 +248,14 @@ while docker inspect -f '{{.State.Running}}' "${NAME}" 2>/dev/null | grep -q tru
   sleep 12
 done
 
-EXIT_CODE="$(docker inspect -f '{{.State.ExitCode}}' "${NAME}" 2>/dev/null || echo 1)"
+EXIT_CODE="$(${CONTAINER_CLI} inspect -f '{{.State.ExitCode}}' "${NAME}" 2>/dev/null || echo 1)"
 if [ "${EXIT_CODE}" != "0" ]; then
-  LOG="$(docker logs --tail 40 "${NAME}" 2>&1 | tr '"' "'" | tr '\n' ' ')"
+  LOG="$(${CONTAINER_CLI} logs --tail 40 "${NAME}" 2>&1 | tr '"' "'" | tr '\n' ' ')"
   write_status "failed" "install" 0 "Builder container exited unexpectedly" "${CONSOLE_URL}" "" "${LOG}"
   exit 1
 fi
 
 write_status "sysprep" "generalize" 82 "Sysprep complete — capturing golden qcow2" "${CONSOLE_URL}"
-FINALIZE=1 BUILD_ID="${BUILD_ID}" WORKDIR="${WORKDIR}" VERSION="${VERSION}" IMAGE_ID="${IMAGE_ID}" OUT="${OUT}" NAME="${NAME}" STORAGE="${STORAGE}" \
+FINALIZE=1 BUILD_ID="${BUILD_ID}" WORKDIR="${WORKDIR}" VERSION="${VERSION}" \
+  IMAGE_ID="${IMAGE_ID}" KRYTON_IMAGE_ID="${IMAGE_ID}" OUT="${OUT}" NAME="${NAME}" STORAGE="${STORAGE}" \
   "${SCRIPT_DIR}/build-golden-image.sh"

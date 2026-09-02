@@ -28,17 +28,43 @@ chown "${USER_NAME}:${USER_NAME}" "${KEYS_DIR}" "${HOME_DIR}/.kryton/events-dock
 
 TOKEN="$(cat "${KEYS_DIR}/lab.token")"
 
+# Prefer docker when present; this lab host often has only podman.
+DOCKUR_RUNTIME="${KRYTON_DOCKUR_RUNTIME:-}"
+if [ -z "${DOCKUR_RUNTIME}" ]; then
+  if command -v docker >/dev/null 2>&1; then
+    DOCKUR_RUNTIME=docker
+  elif command -v podman >/dev/null 2>&1; then
+    DOCKUR_RUNTIME=podman
+  else
+    DOCKUR_RUNTIME=docker
+  fi
+fi
+DOCKUR_GROUP="${KRYTON_DOCKUR_GROUP:-}"
+if [ -z "${DOCKUR_GROUP}" ]; then
+  if getent group docker >/dev/null 2>&1; then
+    DOCKUR_GROUP=docker
+  elif getent group podman >/dev/null 2>&1; then
+    DOCKUR_GROUP=podman
+  else
+    DOCKUR_GROUP="$(id -gn "${USER_NAME}")"
+  fi
+fi
+DOCKUR_AFTER="network-online.target"
+if [ "${DOCKUR_RUNTIME}" = "docker" ]; then
+  DOCKUR_AFTER="network-online.target docker.service"
+fi
+
 install_dockur() {
   ${SUDO} tee /etc/systemd/system/kryton-dockur.service >/dev/null <<UNIT
 [Unit]
 Description=Kryton dockur Windows lab provider
-After=network-online.target docker.service
+After=${DOCKUR_AFTER}
 Wants=network-online.target
 
 [Service]
 Type=simple
 User=${USER_NAME}
-Group=docker
+Group=${DOCKUR_GROUP}
 Environment=KRYTON_PROVIDER=dockur
 Environment=KRYTON_AUTH_MODE=apikey
 Environment=KRYTON_API_KEYS_FILE=${KEYS_FILE}
@@ -46,7 +72,7 @@ Environment=KRYTON_LAB_AUTO_AUTH=true
 Environment=KRYTON_LAB_TOKEN_FILE=${KEYS_DIR}/lab.token
 Environment=KRYTON_ALLOW_INSECURE=true
 Environment=KRYTON_ADDR=:${DOCKUR_PORT}
-Environment=KRYTON_DOCKUR_RUNTIME=docker
+Environment=KRYTON_DOCKUR_RUNTIME=${DOCKUR_RUNTIME}
 Environment=KRYTON_DOCKUR_PUBLIC_HOST=${PUBLIC_HOST}
 Environment=KRYTON_DOCKUR_DATA_DIR=${HOME_DIR}/.kryton/dockur
 Environment=KRYTON_DOCKUR_HTTP_BASE=18006
@@ -83,7 +109,7 @@ Environment=KRYTON_LAB_TOKEN_FILE=${KEYS_DIR}/lab.token
 Environment=KRYTON_ALLOW_INSECURE=true
 Environment=KRYTON_ADDR=:${KV_PORT}
 Environment=KRYTON_IMAGE_NAMESPACE=kryton-images
-Environment=KRYTON_STORAGE_CLASS=rook-ceph-block
+Environment=KRYTON_STORAGE_CLASS=zyvor-rbd-prod
 Environment=KRYTON_PROJECTS=default
 Environment=KRYTON_DEFAULT_PROJECT=default
 Environment=KRYTON_KUBECONFIG=${HOME_DIR}/.kube/config
