@@ -24,7 +24,7 @@ KRYTON_WINDOWS_IMAGE=/path/to/windows11.qcow2 ./scripts/setup-kubevirt.sh
 ./scripts/setup-kubevirt-production.sh --build-golden
 
 # Option C — from your laptop (rsync + remote nohup)
-make run-kubevirt-production-remote H=175.110.122.71 U=sus BUILD=1
+make run-kubevirt-production-remote H=<host> U=<user> BUILD=1
 
 # Option D — Helm customer profile (after golden exists on cluster)
 ./scripts/setup-kubevirt-production.sh --customer-helm --skip-create --image ./out/windows-11e-golden.qcow2

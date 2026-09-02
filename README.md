@@ -40,7 +40,7 @@ One stable machine API. Kubernetes, KubeVirt, and dockur stay behind the provide
 **Kryton** is a provider-neutral Windows workload control plane. Portals, CI, and automation talk to one REST + CloudEvents contract — whether the backend is an in-memory demo, real Windows via [dockur/windows](https://github.com/dockur/windows), or production KubeVirt on Kubernetes.
 
 ```text
-  Veyron / Zeus / Transiva / CI / portals
+  Veyron / Zeus / Atlas / Haven / Axiom / CI / portals
                     │
              REST + CloudEvents
                     │
@@ -139,14 +139,6 @@ krytonctl generate-token | hash-token TOKEN
 Create flags: `--image`, `--cpu`, `--memory`, `--disk`, `--ttl`, and all `--dockur-*` options — see [DOCKUR.md](docs/DOCKUR.md).
 
 Environment: `KRYTON_URL`, `KRYTON_TOKEN`, `KRYTON_PROJECT`.
-
-### Zyvor lab (demo host)
-
-| Service | URL |
-|---------|-----|
-| Demo | `http://175.110.122.71:8088/` |
-| Dockur | `https://175.110.122.71:7088/` |
-| KubeVirt API | `https://175.110.122.71:9088/` |
 
 Product site: [zyvor.dev/kryton](https://zyvor.dev/kryton) · Docs: [zyvor.dev/docs/kryton](https://zyvor.dev/docs/kryton)
 

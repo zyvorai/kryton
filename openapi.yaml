@@ -4,7 +4,7 @@
 openapi: 3.1.0
 info:
   title: Kryton API
-  version: 1.0.0
+  version: 1.1.0
   description: |
     Kryton Windows virtualization control plane. All machine operations are project-scoped.
     Authenticate with `Authorization: Bearer <token>` (apikey mode) or trusted proxy headers.

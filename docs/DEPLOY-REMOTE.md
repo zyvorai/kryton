@@ -28,7 +28,7 @@ http://<host>:8080/
 If the port is firewalled, tunnel:
 
 ```bash
-ssh -L 8080:127.0.0.1:8080 sus@<host>
+ssh -L 8080:127.0.0.1:8080 <user>@<host>
 open http://localhost:8080
 ```
 
@@ -36,7 +36,7 @@ Verify:
 
 ```bash
 curl -s http://<host>:8080/readyz
-ssh sus@<host> krytonctl doctor
+ssh <user>@<host> krytonctl doctor
 ```
 
 ---
@@ -105,5 +105,5 @@ helm upgrade --install kryton ./deploy/helm/kryton -n kryton --create-namespace
 Set `KRYTON_DEPLOY_LOG` to capture a timestamped log under `~/.kryton/`:
 
 ```bash
-KRYTON_DEPLOY_LOG=~/deploy.log ./scripts/deploy-remote.sh sus@host --key
+KRYTON_DEPLOY_LOG=~/deploy.log ./scripts/deploy-remote.sh <user>@<host> --key
 ```

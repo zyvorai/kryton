@@ -350,6 +350,7 @@ Environment: `KRYTON_URL` (default `http://localhost:8080`), `KRYTON_TOKEN`, `KR
 | [Veyron](https://zyvor.dev/veyron) | Fleet templates + GitOps CRDs at scale |
 | [Zeus OS](https://zyvor.dev/zeus-os) | Visual day-2 operator workspace |
 | [Axiom](https://zyvor.dev/axiom) | Private cloud console calling Kryton API |
+| [Atlas](https://zyvor.dev/docs/atlas) | Storage control plane — optional Settings integration |
 | [HyperCluster](https://zyvor.dev/hypercluster) | Bootstrap the target cluster first |
 
 Marketing: [zyvor.dev/kryton](https://zyvor.dev/kryton) · [Blog index](https://zyvor.dev/blog/introducing-kryton)

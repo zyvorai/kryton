@@ -74,7 +74,8 @@ setup-kubevirt-production:
 		$(if $(IMAGE),--image $(IMAGE),) $(ARGS)
 
 run-kubevirt-production-remote:
-	@./scripts/run-kubevirt-production-remote.sh $(or $(H),175.110.122.71) $(or $(U),sus)
+	@test -n "$(H)" || (echo "Usage: make run-kubevirt-production-remote H=<host> U=<user> [BUILD=1]"; exit 1)
+	@./scripts/run-kubevirt-production-remote.sh $(H) $(U)
 
 enable-kubevirt-snapshots:
 	./scripts/enable-kubevirt-snapshots.sh $(ARGS)

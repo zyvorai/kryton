@@ -35,7 +35,7 @@ export KRYTON_STORAGE_CLASS=rook-ceph-block
 | Production | `--devices` | `useAllDevices: true` — only when **non-OS disks** are dedicated to Ceph |
 | Existing cluster | `--pool-only` | Operator already running; only apply pool + StorageClass + VolumeSnapshotClass |
 
-On the Zyvor lab host: **never** pass whole `/dev/sdb` — `sdb2` is `/var/lib/rancher` (k3s). Use `/dev/sdb1` only. `--wipe-device` clears leftover `ceph_bluestore` signatures before Rook claims the partition.
+On a single-disk node where k3s shares the disk: **never** pass whole `/dev/sdb` if `sdb2` is already in use (e.g. `/var/lib/rancher`). Use a dedicated OSD partition such as `/dev/sdb1` only. `--wipe-device` clears leftover `ceph_bluestore` signatures before Rook claims the partition.
 
 Do not run `--devices` on a laptop or a node whose only disk is the OS volume.
 

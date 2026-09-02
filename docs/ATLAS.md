@@ -67,11 +67,9 @@ If Atlas console or another origin calls Kryton, set:
 KRYTON_CORS_ORIGINS=https://atlas.example,http://127.0.0.1:5110
 ```
 
-## Lab layout
+## Related repos
 
 ```
-/Users/ssahani/tt/tt/kryton   ← this repo
-/Users/ssahani/tt/atlas       ← ../../atlas
+kryton/   ← this repo
+atlas/    ← ../../atlas (sibling checkout)
 ```
-
-Shared lab host often runs both: Kryton kubevirt `:9088`, Atlas gateway `:5110` / NodePort.

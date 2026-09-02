@@ -26,18 +26,6 @@ Start here, then drill into the guide that matches your role.
 - [zyvor.dev/docs/kryton](https://zyvor.dev/docs/kryton) — suite docs  
 - [Blog: Introducing Kryton](https://zyvor.dev/blog/introducing-kryton)
 
-## Lab reference (shared demo host)
-
-When using the Zyvor lab at `175.110.122.71`:
-
-| Service | URL | Provider |
-|---------|-----|----------|
-| Demo | `http://175.110.122.71:8088/` | `demo` |
-| Dockur (real Windows) | `https://175.110.122.71:7088/` | `dockur` |
-| KubeVirt API | `https://175.110.122.71:9088/` | `kubevirt` |
-
-Lab uses **apikey** auth. Token on the host: `~/.kryton/lab.token`. With lab auto-auth enabled, the UI loads the token automatically.
-
 ## Scripts
 
 | Script | Purpose |

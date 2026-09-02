@@ -9,7 +9,7 @@ import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-const base = process.env.KRYTON_DOCKUR_URL || 'http://175.110.122.71:7088';
+const base = process.env.KRYTON_DOCKUR_URL || 'http://127.0.0.1:7088';
 const authToken = process.env.KRYTON_TOKEN || ''; // optional override; lab auto-auth used when unset
 const shots = process.env.KRYTON_SMOKE_SHOTS || '/tmp/kryton-dockur-test';
 mkdirSync(shots, { recursive: true });

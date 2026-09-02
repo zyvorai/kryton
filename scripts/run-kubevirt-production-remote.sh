@@ -4,8 +4,8 @@
 # Run KubeVirt production setup on a remote lab host (rsync + SSH + nohup for long golden builds).
 set -euo pipefail
 
-HOST="${1:-175.110.122.71}"
-USER="${2:-sus}"
+HOST="${1:?host required — run with -h for usage}"
+USER="${2:-${USER:?user required — pass as second argument or set USER}}"
 REMOTE="${USER}@${HOST}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -26,7 +26,7 @@ Environment:
   KRYTON_REMOTE_DIR    Remote checkout path
 
 Example:
-  BUILD_GOLDEN=1 ./scripts/run-kubevirt-production-remote.sh 175.110.122.71 sus
+  BUILD_GOLDEN=1 ./scripts/run-kubevirt-production-remote.sh <host> <user>
   tail -f ~/.kryton/kubevirt-production.log
 EOF
 }
