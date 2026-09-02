@@ -84,12 +84,18 @@ resources:
 
 podSecurityContext:
   runAsNonRoot: true
+  # Explicit numeric UID/GID (distroless nonroot's actual identity):
+  # some kubelet/containerd versions cannot verify runAsNonRoot against
+  # an image's named "nonroot" USER without a numeric value here.
+  runAsUser: 65532
+  runAsGroup: 65532
   seccompProfile:
     type: RuntimeDefault
 
 containerSecurityContext:
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: true
+  runAsUser: 65532
   capabilities:
     drop: ["ALL"]
 

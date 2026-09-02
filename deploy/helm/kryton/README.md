@@ -41,8 +41,12 @@ The two storage overlays are meant to be layered on top of `values.yaml` or `val
 | `service.type` / `service.nodePort` | `ClusterIP` / `0` | Set `NodePort` + a port for lab access without an Ingress controller |
 | `rbac.clusterWide` | `true` | `true` → ClusterRole (multi-namespace/multi-project); `false` → namespaced Role scoped to the release namespace |
 | `images` | 3 sample entries | Static catalog entries (`KRYTON_IMAGES_FILE`) describing selectable images in the UI/CLI — the backing `DataSource` still has to exist in `imageNamespace`, see [docs/GOLDEN-IMAGES.md](../../../docs/GOLDEN-IMAGES.md) |
-| `resources` / `podSecurityContext` / `containerSecurityContext` | hardened defaults | Non-root, read-only rootfs, all capabilities dropped |
+| `resources` / `podSecurityContext` / `containerSecurityContext` | hardened defaults | Non-root (explicit numeric `runAsUser: 65532`/`runAsGroup: 65532` — required for kubelets that can't verify `runAsNonRoot` against the image's named `nonroot` user), read-only rootfs, all capabilities dropped |
 | `networkPolicy.enabled` | `false` | When on, restricts ingress to port 8080 and allows all egress (KubeVirt/API-server access) |
+
+## Ephemeral local state
+
+`readOnlyRootFilesystem: true` leaves krytond's default `$HOME/.kryton/{storage,settings}.json` unwritable, so the chart points `KRYTON_STORAGE_CONFIG_FILE`/`KRYTON_SETTINGS_CONFIG_FILE` at `/var/lib/kryton`, backed by an `emptyDir`. That means the operator-set default StorageClass and Settings-UI values (Atlas config, event webhook URL, etc.) do **not** survive a pod restart or reschedule — they reset to the Helm-configured defaults (`storageClass`, `eventWebhookURL` values) each time. This is consistent with the single-replica-only posture below; a durable fix would need a small PVC or a ConfigMap/Secret written back through the Kubernetes API instead of a local file.
 
 ## Single-replica today
 

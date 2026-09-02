@@ -47,6 +47,12 @@ spec:
             {{- end }}
             - name: KRYTON_IMAGES_FILE
               value: /etc/kryton/catalog/images.json
+            # readOnlyRootFilesystem leaves no writable $HOME/.kryton, so
+            # point krytond's local state files at the "state" emptyDir below.
+            - name: KRYTON_STORAGE_CONFIG_FILE
+              value: /var/lib/kryton/storage.json
+            - name: KRYTON_SETTINGS_CONFIG_FILE
+              value: /var/lib/kryton/settings.json
             - name: KRYTON_AUTH_MODE
               value: {{ .Values.auth.mode | quote }}
             - name: KRYTON_TRUST_PROXY
@@ -86,6 +92,8 @@ spec:
               mountPath: /etc/kryton/auth
               readOnly: true
             {{- end }}
+            - name: state
+              mountPath: /var/lib/kryton
           readinessProbe:
             httpGet: {path: /readyz, port: http}
             initialDelaySeconds: 3
@@ -105,6 +113,8 @@ spec:
           secret:
             secretName: {{ required "auth.existingSecret is required when authentication is enabled" .Values.auth.existingSecret }}
         {{- end }}
+        - name: state
+          emptyDir: {}
       nodeSelector:
         {{- toYaml .Values.nodeSelector | nindent 8 }}
       tolerations:
