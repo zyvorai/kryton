@@ -184,14 +184,3 @@ func (s *Server) applyStorageClass(name string) {
 		kv.SetStorageClass(name)
 	}
 }
-
-func (s *Server) onStorageSetupComplete(storageClass string, setDefault bool) {
-	if !setDefault || storageClass == "" {
-		return
-	}
-	cfg := storage.Config{StorageClass: storageClass}
-	if s.storageStore != nil {
-		_ = s.storageStore.Save(cfg)
-	}
-	s.applyStorageClass(storageClass)
-}

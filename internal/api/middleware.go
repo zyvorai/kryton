@@ -23,8 +23,12 @@ import (
 	"net/http"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 
+	"golang.org/x/time/rate"
+
+	"github.com/zyvorai/kryton/internal/auth"
 	"github.com/zyvorai/kryton/internal/id"
 )
 
@@ -148,6 +152,81 @@ func (s *Server) recoverer(next http.Handler) http.Handler {
 				s.writeAPIError(w, r, http.StatusInternalServerError, "INTERNAL", "internal server error", "Unexpected panic — check krytond logs with the request id.")
 			}
 		}()
+		next.ServeHTTP(w, r)
+	})
+}
+
+// rateLimiter is a per-key token bucket, one bucket per API caller
+// (keyed by API-key name, falling back to remote address when
+// unauthenticated). It sweeps idle buckets opportunistically so
+// long-running processes with many distinct callers don't grow
+// unbounded.
+type rateLimiter struct {
+	mu        sync.Mutex
+	buckets   map[string]*rateLimiterEntry
+	rps       rate.Limit
+	burst     int
+	lastSweep time.Time
+}
+
+type rateLimiterEntry struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
+}
+
+const rateLimiterIdleTTL = 10 * time.Minute
+
+// newRateLimiter builds a rateLimiter, or returns nil (meaning "disabled")
+// when rps <= 0 — the zero-value KRYTON_RATE_LIMIT_RPS default.
+func newRateLimiter(rps, burst int) *rateLimiter {
+	if rps <= 0 {
+		return nil
+	}
+	if burst <= 0 {
+		burst = rps
+	}
+	return &rateLimiter{buckets: map[string]*rateLimiterEntry{}, rps: rate.Limit(rps), burst: burst}
+}
+
+func (rl *rateLimiter) allow(key string) bool {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	now := time.Now()
+	if now.Sub(rl.lastSweep) > rateLimiterIdleTTL {
+		for k, e := range rl.buckets {
+			if now.Sub(e.lastSeen) > rateLimiterIdleTTL {
+				delete(rl.buckets, k)
+			}
+		}
+		rl.lastSweep = now
+	}
+	e, ok := rl.buckets[key]
+	if !ok {
+		e = &rateLimiterEntry{limiter: rate.NewLimiter(rl.rps, rl.burst)}
+		rl.buckets[key] = e
+	}
+	e.lastSeen = now
+	return e.limiter.Allow()
+}
+
+// rateLimit enforces s.rateLimiter (a no-op pass-through when rate
+// limiting is disabled). It must run after auth resolution — it keys on
+// the resolved Principal.Name so each API-key gets its own bucket, and
+// only unauthenticated callers (disabled auth mode) share a bucket per
+// remote address.
+func (s *Server) rateLimit(next http.Handler) http.Handler {
+	if s.rateLimiter == nil {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		key := auth.FromContext(r.Context()).Name
+		if key == "" {
+			key = r.RemoteAddr
+		}
+		if !s.rateLimiter.allow(key) {
+			s.writeAPIError(w, r, http.StatusTooManyRequests, "RATE_LIMITED", "too many requests", "Slow down and retry after a short backoff.")
+			return
+		}
 		next.ServeHTTP(w, r)
 	})
 }

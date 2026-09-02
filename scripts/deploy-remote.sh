@@ -58,18 +58,20 @@ Options:
   --no-service        Install binaries only (do not enable systemd unit)
   --key               SSH key auth (clear password)
   --uninstall         Stop service and remove install
+  --port <N>          Listen port for the demo unit (default: 8080, or \$KRYTON_PORT)
   -v, --verbose       Verbose rsync
 
 Environment:
   KRYTON_DEPLOY_LOG    Log file path
   KRYTON_SSH_RETRIES   SSH retry count (default: 3)
-  KRYTON_PORT          Listen port for demo unit (default: 8080)
+  KRYTON_PORT          Listen port for demo unit (default: 8080; overridden by --port)
   DEPLOY_DIR           Override remote staging dir (default: ~/.deployments/kryton)
 
 Examples:
   $0 <user>@<host> --key
   $0 <user>@<host> --quick
   $0 <user>@<host> --build-local --quick
+  $0 <user>@<host> --port 8090
   make deploy-remote H=<host> U=<user>
 EOF
 }
@@ -87,6 +89,9 @@ while [ $# -gt 0 ]; do
         --verify-only)    VERIFY_ONLY=true; shift ;;
         --preflight-only) PREFLIGHT_ONLY=true; shift ;;
         --no-service)     NO_SERVICE=true; shift ;;
+        --port)
+            [ -n "${2:-}" ] || { echo "--port requires a value" >&2; exit 1; }
+            KRYTON_PORT="$2"; shift 2 ;;
         -v|--verbose)     VERBOSE=true; shift ;;
         *)
             POSITIONAL+=("$1")
@@ -94,6 +99,10 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
+
+case "${KRYTON_PORT}" in
+    ''|*[!0-9]*|0) echo "invalid port: '${KRYTON_PORT}' (must be a positive integer)" >&2; exit 1 ;;
+esac
 
 TARGET_HOST="${POSITIONAL[0]:-}"
 TARGET_USER="${POSITIONAL[1]:-root}"

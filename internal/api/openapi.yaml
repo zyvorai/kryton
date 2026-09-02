@@ -215,6 +215,14 @@ paths:
       tags: [machines]
       parameters:
         - $ref: '#/components/parameters/Project'
+        - in: query
+          name: limit
+          description: Max items per page (1-500).
+          schema: {type: integer, default: 50}
+        - in: query
+          name: cursor
+          description: Opaque page cursor from a previous response's nextCursor.
+          schema: {type: string}
       responses:
         '200': {description: Machines}
     post:

@@ -36,24 +36,24 @@ func TestCreateAndLifecycleUsesKubernetesREST(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		switch {
 		case r.Method == "GET" && r.URL.Path == "/version":
-			io.WriteString(w, `{"gitVersion":"v1.36.0"}`)
+			_, _ = io.WriteString(w, `{"gitVersion":"v1.36.0"}`)
 		case r.Method == "GET" && r.URL.Path == "/apis/kubevirt.io/v1":
-			io.WriteString(w, `{"kind":"APIResourceList"}`)
+			_, _ = io.WriteString(w, `{"kind":"APIResourceList"}`)
 		case r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/v1/namespaces/"):
 			http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
 		case r.Method == "POST" && r.URL.Path == "/api/v1/namespaces":
 			w.WriteHeader(http.StatusCreated)
-			io.WriteString(w, `{"metadata":{"name":"finance"}}`)
+			_, _ = io.WriteString(w, `{"metadata":{"name":"finance"}}`)
 		case r.Method == "GET" && strings.Contains(r.URL.Path, "/roles/"):
 			http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
 		case r.Method == "GET" && strings.Contains(r.URL.Path, "/rolebindings/"):
 			http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
 		case r.Method == "POST" && strings.Contains(r.URL.Path, "/roles"):
 			w.WriteHeader(http.StatusCreated)
-			io.WriteString(w, `{"metadata":{"name":"kryton-datavolume-cloner"}}`)
+			_, _ = io.WriteString(w, `{"metadata":{"name":"kryton-datavolume-cloner"}}`)
 		case r.Method == "POST" && strings.Contains(r.URL.Path, "/rolebindings"):
 			w.WriteHeader(http.StatusCreated)
-			io.WriteString(w, `{"metadata":{"name":"kryton-allow-clone-from-finance"}}`)
+			_, _ = io.WriteString(w, `{"metadata":{"name":"kryton-allow-clone-from-finance"}}`)
 		case r.Method == "POST" && r.URL.Path == "/apis/kubevirt.io/v1/namespaces/finance/virtualmachines":
 			_ = json.NewDecoder(r.Body).Decode(&created)
 			created["status"] = map[string]any{"printableStatus": "Starting"}
@@ -62,14 +62,14 @@ func TestCreateAndLifecycleUsesKubernetesREST(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(created)
 		case r.Method == "GET" && r.URL.Path == "/apis/kubevirt.io/v1/namespaces/finance/virtualmachines":
 			if created == nil {
-				io.WriteString(w, `{"items":[]}`)
+				_, _ = io.WriteString(w, `{"items":[]}`)
 				return
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{"items": []any{created}})
 		case r.Method == "GET" && strings.Contains(r.URL.Path, "/virtualmachineinstances/"):
-			io.WriteString(w, `{"status":{"interfaces":[{"ipAddress":"10.0.0.42"}]}}`)
+			_, _ = io.WriteString(w, `{"status":{"interfaces":[{"ipAddress":"10.0.0.42"}]}}`)
 		case r.Method == "GET" && strings.HasSuffix(r.URL.Path, "/virtualmachineinstances"):
-			io.WriteString(w, `{"items":[]}`)
+			_, _ = io.WriteString(w, `{"items":[]}`)
 		case r.Method == "PATCH" && strings.Contains(r.URL.Path, "/virtualmachines/"):
 			var patch map[string]any
 			_ = json.NewDecoder(r.Body).Decode(&patch)
@@ -121,24 +121,24 @@ func TestSnapshotListRestoreDelete(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		switch {
 		case r.Method == "GET" && r.URL.Path == "/version":
-			io.WriteString(w, `{"gitVersion":"v1.36.0"}`)
+			_, _ = io.WriteString(w, `{"gitVersion":"v1.36.0"}`)
 		case r.Method == "GET" && r.URL.Path == "/apis/kubevirt.io/v1":
-			io.WriteString(w, `{"kind":"APIResourceList"}`)
+			_, _ = io.WriteString(w, `{"kind":"APIResourceList"}`)
 		case r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/v1/namespaces/"):
 			http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
 		case r.Method == "POST" && r.URL.Path == "/api/v1/namespaces":
 			w.WriteHeader(http.StatusCreated)
-			io.WriteString(w, `{"metadata":{"name":"finance"}}`)
+			_, _ = io.WriteString(w, `{"metadata":{"name":"finance"}}`)
 		case r.Method == "GET" && strings.Contains(r.URL.Path, "/roles/"):
 			http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
 		case r.Method == "GET" && strings.Contains(r.URL.Path, "/rolebindings/"):
 			http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
 		case r.Method == "POST" && strings.Contains(r.URL.Path, "/roles"):
 			w.WriteHeader(http.StatusCreated)
-			io.WriteString(w, `{"metadata":{"name":"kryton-datavolume-cloner"}}`)
+			_, _ = io.WriteString(w, `{"metadata":{"name":"kryton-datavolume-cloner"}}`)
 		case r.Method == "POST" && strings.Contains(r.URL.Path, "/rolebindings"):
 			w.WriteHeader(http.StatusCreated)
-			io.WriteString(w, `{"metadata":{"name":"kryton-allow-clone-from-finance"}}`)
+			_, _ = io.WriteString(w, `{"metadata":{"name":"kryton-allow-clone-from-finance"}}`)
 		case r.Method == "POST" && r.URL.Path == "/apis/kubevirt.io/v1/namespaces/finance/virtualmachines":
 			_ = json.NewDecoder(r.Body).Decode(&created)
 			created["status"] = map[string]any{"printableStatus": "Stopped"}
@@ -148,7 +148,7 @@ func TestSnapshotListRestoreDelete(t *testing.T) {
 		case r.Method == "GET" && r.URL.Path == "/apis/kubevirt.io/v1/namespaces/finance/virtualmachines":
 			_ = json.NewEncoder(w).Encode(map[string]any{"items": []any{created}})
 		case r.Method == "GET" && strings.HasSuffix(r.URL.Path, "/virtualmachineinstances"):
-			io.WriteString(w, `{"items":[]}`)
+			_, _ = io.WriteString(w, `{"items":[]}`)
 		case r.Method == "POST" && strings.Contains(r.URL.Path, "virtualmachinesnapshots") && !strings.Contains(r.URL.Path, "virtualmachinerestores"):
 			_ = json.NewDecoder(r.Body).Decode(&snapshot)
 			snapshot["metadata"].(map[string]any)["namespace"] = "finance"
@@ -163,7 +163,7 @@ func TestSnapshotListRestoreDelete(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(restore)
 		case r.Method == "DELETE" && strings.Contains(r.URL.Path, "virtualmachinesnapshots/"):
 			w.WriteHeader(http.StatusOK)
-			io.WriteString(w, `{"kind":"Status","status":"Success"}`)
+			_, _ = io.WriteString(w, `{"kind":"Status","status":"Success"}`)
 		default:
 			http.Error(w, `{"message":"not found `+r.Method+" "+r.URL.Path+`"}`, http.StatusNotFound)
 		}

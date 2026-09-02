@@ -14,7 +14,150 @@
 
 package storage
 
-import "testing"
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"testing"
+	"time"
+)
+
+// requireKubectl skips a test when kubectl isn't on PATH: SetupManager.Available
+// hard-requires it (so Start refuses to run at all otherwise), which is an
+// environment precondition rather than something worth faking.
+func requireKubectl(t *testing.T) {
+	t.Helper()
+	if _, err := exec.LookPath("kubectl"); err != nil {
+		t.Skip("kubectl not on PATH; skipping SetupManager.Start/run test")
+	}
+}
+
+// writeFakeScript writes an executable shell script at dir/name that
+// exits with exitCode, letting tests drive SetupManager.Start/run's
+// real subprocess-launching code path without touching real storage.
+func writeFakeScript(t *testing.T, dir, name string, exitCode int) string {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	body := "#!/bin/sh\nexit " + strconv.Itoa(exitCode) + "\n"
+	if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
+		t.Fatalf("write fake script: %v", err)
+	}
+	return path
+}
+
+func waitForState(t *testing.T, m *SetupManager, want string, timeout time.Duration) *SetupState {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		st, err := m.Get()
+		if err != nil {
+			t.Fatalf("Get: %v", err)
+		}
+		if st.State == want {
+			return st
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	st, _ := m.Get()
+	t.Fatalf("timed out waiting for state %q, last state: %+v", want, st)
+	return nil
+}
+
+func TestStartRequiresAvailableScripts(t *testing.T) {
+	m, err := NewSetupManager(SetupConfig{BaseDir: t.TempDir()})
+	if err != nil {
+		t.Fatalf("NewSetupManager: %v", err)
+	}
+	// No SnapshotsScript configured: Available() is false regardless of kubectl.
+	if _, err := m.Start(SetupRequest{Backend: "longhorn"}); err == nil {
+		t.Fatal("expected Start to refuse when scripts are not available")
+	}
+}
+
+func TestStartRejectsInvalidRequestBeforeRunning(t *testing.T) {
+	requireKubectl(t)
+	dir := t.TempDir()
+	script := writeFakeScript(t, dir, "enable-kubevirt-snapshots.sh", 0)
+	m, err := NewSetupManager(SetupConfig{BaseDir: t.TempDir(), SnapshotsScript: script})
+	if err != nil {
+		t.Fatalf("NewSetupManager: %v", err)
+	}
+	if _, err := m.Start(SetupRequest{Backend: "not-a-real-backend"}); err == nil {
+		t.Fatal("expected Start to reject an invalid backend")
+	}
+	st, err := m.Get()
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if st.State != "idle" {
+		t.Fatalf("expected no status written for a request that failed validation, got %+v", st)
+	}
+}
+
+func TestStartSucceedsAndReportsSucceededState(t *testing.T) {
+	requireKubectl(t)
+	dir := t.TempDir()
+	script := writeFakeScript(t, dir, "enable-kubevirt-snapshots.sh", 0)
+	m, err := NewSetupManager(SetupConfig{BaseDir: t.TempDir(), SnapshotsScript: script})
+	if err != nil {
+		t.Fatalf("NewSetupManager: %v", err)
+	}
+	st, err := m.Start(SetupRequest{Backend: "longhorn"})
+	if err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	if st.State != "running" {
+		t.Fatalf("expected Start to return the initial running state, got %+v", st)
+	}
+	final := waitForState(t, m, "succeeded", 2*time.Second)
+	if final.StorageClass != "longhorn" {
+		t.Fatalf("expected storageClass longhorn, got %+v", final)
+	}
+	logs := m.Logs(50)
+	if len(logs) == 0 {
+		t.Fatal("expected log lines to have been written")
+	}
+}
+
+func TestStartReportsFailedStateOnScriptError(t *testing.T) {
+	requireKubectl(t)
+	dir := t.TempDir()
+	script := writeFakeScript(t, dir, "enable-kubevirt-snapshots.sh", 1)
+	m, err := NewSetupManager(SetupConfig{BaseDir: t.TempDir(), SnapshotsScript: script})
+	if err != nil {
+		t.Fatalf("NewSetupManager: %v", err)
+	}
+	if _, err := m.Start(SetupRequest{Backend: "longhorn"}); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	final := waitForState(t, m, "failed", 2*time.Second)
+	if final.Error == "" {
+		t.Fatal("expected an Error message recorded for a failing script")
+	}
+}
+
+func TestStartRefusesConcurrentRun(t *testing.T) {
+	requireKubectl(t)
+	dir := t.TempDir()
+	// A script that sleeps briefly so the manager is still "running" when
+	// the second Start call arrives.
+	path := filepath.Join(dir, "enable-kubevirt-snapshots.sh")
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nsleep 0.3\nexit 0\n"), 0o755); err != nil {
+		t.Fatalf("write fake script: %v", err)
+	}
+	m, err := NewSetupManager(SetupConfig{BaseDir: t.TempDir(), SnapshotsScript: path})
+	if err != nil {
+		t.Fatalf("NewSetupManager: %v", err)
+	}
+	if _, err := m.Start(SetupRequest{Backend: "longhorn"}); err != nil {
+		t.Fatalf("first Start: %v", err)
+	}
+	if _, err := m.Start(SetupRequest{Backend: "longhorn"}); err == nil {
+		t.Fatal("expected the second concurrent Start to be refused")
+	}
+	waitForState(t, m, "succeeded", 2*time.Second)
+}
 
 func TestValidateSetupRequest(t *testing.T) {
 	if err := validateSetupRequest(SetupRequest{Backend: "longhorn"}); err != nil {
@@ -50,7 +193,7 @@ func TestBuildSetupCommand(t *testing.T) {
 	if err != nil || script != m.rookScript || args[0] != "--pool-only" {
 		t.Fatalf("pool-only: script=%s args=%v err=%v", script, args, err)
 	}
-	script, args, err = buildSetupCommand(m, SetupRequest{Backend: "rook-ceph", RookMode: "device", Device: "/dev/sdb1", WipeDevice: true})
+	_, args, err = buildSetupCommand(m, SetupRequest{Backend: "rook-ceph", RookMode: "device", Device: "/dev/sdb1", WipeDevice: true})
 	if err != nil || len(args) != 5 || args[4] != "--wipe-device" {
 		t.Fatalf("device: args=%v err=%v", args, err)
 	}

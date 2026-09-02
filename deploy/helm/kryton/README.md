@@ -34,12 +34,19 @@ The two storage overlays are meant to be layered on top of `values.yaml` or `val
 | `eventWebhookURL` | `""` | Optional CloudEvents webhook sink |
 | `corsOrigins` | `[]` | Browser origins allowed to call the API cross-origin (portals, dashboards) |
 | `reconcileInterval` | `30s` | TTL-expiry sweep interval |
+| `rateLimit.rps` / `.burst` | `0` / `0` | Per-caller `/api/*` token bucket; `0` disables rate limiting |
+| `serviceMonitor.enabled` | `false` | Renders a Prometheus Operator `ServiceMonitor` scraping `/metrics`; requires the Prometheus Operator CRDs in-cluster |
+| `podDisruptionBudget.enabled` | `false` | Renders a `PodDisruptionBudget`; only meaningful once `replicaCount > 1` is safe — see the note below |
 | `ingress.*` | disabled | Standard `networking.k8s.io/v1` Ingress; only used when `ingress.enabled: true` |
 | `service.type` / `service.nodePort` | `ClusterIP` / `0` | Set `NodePort` + a port for lab access without an Ingress controller |
 | `rbac.clusterWide` | `true` | `true` → ClusterRole (multi-namespace/multi-project); `false` → namespaced Role scoped to the release namespace |
 | `images` | 3 sample entries | Static catalog entries (`KRYTON_IMAGES_FILE`) describing selectable images in the UI/CLI — the backing `DataSource` still has to exist in `imageNamespace`, see [docs/GOLDEN-IMAGES.md](../../../docs/GOLDEN-IMAGES.md) |
 | `resources` / `podSecurityContext` / `containerSecurityContext` | hardened defaults | Non-root, read-only rootfs, all capabilities dropped |
 | `networkPolicy.enabled` | `false` | When on, restricts ingress to port 8080 and allows all egress (KubeVirt/API-server access) |
+
+## Single-replica today
+
+Do not set `replicaCount > 1`. `internal/reconciler/ttl.go` has no leader election, so every replica would independently expire the same machines, and `internal/events/events.go`'s event history/SSE fan-out is purely in-process, so different replicas would show different event streams to different clients. `podDisruptionBudget` is included but left disabled by default for the same reason — flip both on only after that gap is closed. See [docs/ARCHITECTURE.md](../../../docs/ARCHITECTURE.md).
 
 ## Auth secret
 

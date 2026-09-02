@@ -185,7 +185,7 @@ func (b *Bus) deliverWebhook(parent context.Context, e Event) {
 		b.log.Warn("event webhook failed", "error", err)
 		return
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	if res.StatusCode >= 300 {
 		b.log.Warn("event webhook returned error", "status", res.StatusCode)
 	}

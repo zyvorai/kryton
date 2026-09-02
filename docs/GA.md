@@ -31,6 +31,7 @@ Production Kryton is the **kubevirt** provider behind Helm, hashed API keys, and
 
 ## Explicitly out of GA
 
-- Live migration / HA replicas (`liveMigration` remains false).
+- Live migration / HA replicas (`liveMigration` remains false) — this is about the KubeVirt **guest VM**; it's separate from krytond's own replica count below.
+- Multiple `krytond` replicas (`replicaCount: 1` only) — `internal/reconciler/ttl.go` has no leader election and `internal/events/events.go`'s history/SSE fan-out is in-process, so scaling out krytond itself is unsafe until both are fixed. See [ARCHITECTURE.md](ARCHITECTURE.md).
 - Dockur snapshots.
 - Microsoft media, product keys, and Windows licensing (operator-owned).

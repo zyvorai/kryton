@@ -55,6 +55,12 @@ spec:
               value: {{ .Values.auth.allowInsecure | quote }}
             - name: KRYTON_RECONCILE_INTERVAL
               value: {{ .Values.reconcileInterval | quote }}
+            {{- if gt (.Values.rateLimit.rps | int) 0 }}
+            - name: KRYTON_RATE_LIMIT_RPS
+              value: {{ .Values.rateLimit.rps | quote }}
+            - name: KRYTON_RATE_LIMIT_BURST
+              value: {{ .Values.rateLimit.burst | quote }}
+            {{- end }}
             {{- if .Values.eventWebhookURL }}
             - name: KRYTON_EVENT_WEBHOOK_URL
               value: {{ .Values.eventWebhookURL | quote }}

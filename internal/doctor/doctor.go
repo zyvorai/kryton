@@ -292,17 +292,15 @@ func kubevirtSnapshotGateEnabled(ctx context.Context, kc *kubeapi.Client) bool {
 	if err := kc.JSON(ctx, "GET", "/apis/kubevirt.io/v1/kubevirts", "", nil, &list); err != nil || len(list.Items) == 0 {
 		return true
 	}
-	for _, item := range list.Items {
-		dev := nestedMap(item, "spec", "configuration", "developerConfiguration")
-		raw, _ := dev["featureGates"].([]any)
-		for _, g := range raw {
-			if s, ok := g.(string); ok && s == "Snapshot" {
-				return true
-			}
+	// Exactly one cluster-scoped KubeVirt resource is expected; check it.
+	dev := nestedMap(list.Items[0], "spec", "configuration", "developerConfiguration")
+	raw, _ := dev["featureGates"].([]any)
+	for _, g := range raw {
+		if s, ok := g.(string); ok && s == "Snapshot" {
+			return true
 		}
-		return false
 	}
-	return true
+	return false
 }
 
 func nestedMap(m map[string]any, keys ...string) map[string]any {

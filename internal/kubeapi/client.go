@@ -86,7 +86,7 @@ func New(cfg Config) (*Client, error) {
 			port = os.Getenv("KUBERNETES_SERVICE_PORT")
 		}
 		if host == "" {
-			return nil, errors.New("Kubernetes endpoint is unset and in-cluster service environment is unavailable")
+			return nil, errors.New("kubernetes endpoint is unset and in-cluster service environment is unavailable")
 		}
 		if port == "" {
 			port = "443"
@@ -182,7 +182,7 @@ func (c *Client) JSON(ctx context.Context, method, path, contentType string, bod
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	payload, err := io.ReadAll(io.LimitReader(res.Body, 8<<20))
 	if err != nil {
 		return err

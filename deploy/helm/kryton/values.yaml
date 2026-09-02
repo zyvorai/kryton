@@ -1,3 +1,9 @@
+# Do NOT set replicaCount > 1 today. internal/reconciler/ttl.go has no
+# leader election — every replica would independently expire the same
+# machines — and internal/events/events.go's history/SSE fan-out is
+# purely in-process, so replicas would show different event streams to
+# different clients. See docs/ARCHITECTURE.md's "Single-replica today"
+# note. Fix both before scaling out.
 replicaCount: 1
 
 image:
@@ -30,6 +36,26 @@ auth:
 eventWebhookURL: ""
 corsOrigins: []
 reconcileInterval: 30s
+
+rateLimit:
+  # requests/sec per caller (API-key name, or remote address when auth is
+  # disabled); 0 disables rate limiting. See README.md's Configuration table.
+  rps: 0
+  burst: 0
+
+# Requires the Prometheus Operator CRDs installed in-cluster. Off by
+# default so the chart installs cleanly without them.
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  labels: {}
+
+# Only meaningful once replicaCount > 1 is safe — see the note above
+# replicaCount. Off by default; the template is included so it's ready
+# to enable once that's fixed.
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
 
 ingress:
   enabled: false

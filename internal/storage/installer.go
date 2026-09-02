@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -172,7 +173,7 @@ func (m *SetupManager) Logs(limit int) []string {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var lines []string
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
@@ -261,9 +262,9 @@ func (m *SetupManager) run(req SetupRequest, st SetupState) {
 		_ = m.writeStatus(st)
 		return
 	}
-	defer logf.Close()
+	defer func() { _ = logf.Close() }()
 
-	fmt.Fprintf(logf, "[INFO] %s %v\n", script, args)
+	_, _ = fmt.Fprintf(logf, "[INFO] %s %v\n", script, args)
 	cmd := exec.Command(script, args...)
 	cmd.Env = os.Environ()
 	cmd.Stdout = logf
@@ -279,7 +280,7 @@ func (m *SetupManager) run(req SetupRequest, st SetupState) {
 		st.Message = "Storage setup failed"
 		st.UpdatedAt = time.Now().UTC()
 		_ = m.writeStatus(st)
-		fmt.Fprintf(logf, "[ERR] %v\n", err)
+		_, _ = fmt.Fprintf(logf, "[ERR] %v\n", err)
 		return
 	}
 
@@ -287,7 +288,7 @@ func (m *SetupManager) run(req SetupRequest, st SetupState) {
 	st.Message = fmt.Sprintf("Installed %s — use StorageClass %s", req.Backend, st.StorageClass)
 	st.UpdatedAt = time.Now().UTC()
 	_ = m.writeStatus(st)
-	fmt.Fprintf(logf, "[OK] %s\n", st.Message)
+	_, _ = fmt.Fprintf(logf, "[OK] %s\n", st.Message)
 
 	if m.onComplete != nil && st.StorageClass != "" {
 		m.onComplete(st.StorageClass, req.SetDefault)
@@ -323,7 +324,7 @@ func validateSetupRequest(req SetupRequest) error {
 				return fmt.Errorf("device path required for rook device mode (e.g. /dev/sdb1)")
 			}
 			if reason := blockedDeviceReason(req.Device); reason != "" {
-				return fmt.Errorf(reason)
+				return errors.New(reason)
 			}
 		}
 	}

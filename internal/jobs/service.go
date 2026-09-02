@@ -390,7 +390,7 @@ func storageSetupJob(m *storage.SetupManager) *model.Job {
 	}
 	active := st.State == "running"
 	recent := time.Since(st.UpdatedAt) < 2*time.Hour
-	if !active && !(recent && st.State != "idle" && st.State != "") {
+	if !active && (!recent || st.State == "idle" || st.State == "") {
 		return nil
 	}
 	state := model.JobRunning
@@ -403,16 +403,18 @@ func storageSetupJob(m *storage.SetupManager) *model.Job {
 		return nil
 	}
 	progress := 50
-	if state == model.JobSucceeded {
+	switch state {
+	case model.JobSucceeded:
 		progress = 100
-	} else if state == model.JobFailed {
+	case model.JobFailed:
 		progress = 0
 	}
 	labels := []string{"Enable KubeVirt snapshots", "Install CSI backend", "Apply StorageClass", "Verify cluster inventory"}
 	stepIdx := 2
-	if state == model.JobSucceeded {
+	switch state {
+	case model.JobSucceeded:
 		stepIdx = 5
-	} else if state == model.JobFailed {
+	case model.JobFailed:
 		stepIdx = 2
 	}
 	steps := make([]model.JobStep, len(labels))

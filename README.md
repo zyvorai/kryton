@@ -280,6 +280,7 @@ make deploy-remote H=<host> U=<user> ARGS='--quick --key'
 | `--quick` | Skip Go toolchain install when `go` is already present |
 | `--build-local` | Ship Linux binaries built on your laptop |
 | `--no-service` | Install binaries only |
+| `--port <N>` | Listen port for the demo systemd unit (default `8080`, or `$KRYTON_PORT`) — use when the default port is already taken on the host |
 | `--verify-only` | Hit `/readyz` |
 | `--uninstall` | Remove unit + binaries + staging dir |
 
@@ -397,6 +398,10 @@ OpenAPI: [`openapi.yaml`](openapi.yaml) (also served at `/openapi.yaml`). Full c
 | `KRYTON_EVENTS_FILE` | *(memory only)* | Append-only JSONL audit log (survives restarts) |
 | `KRYTON_EVENT_WEBHOOK_SECRET` | *(none)* | HMAC-SHA256 signature for webhook payloads |
 | `KRYTON_DOCKUR_PUBLIC_HOST` | `127.0.0.1` | Hostname/IP for console URLs |
+| `KRYTON_RATE_LIMIT_RPS` | `0` (disabled) | Per-caller `/api/*` requests/sec (token bucket keyed by API-key name, or remote address when auth is disabled) |
+| `KRYTON_RATE_LIMIT_BURST` | `KRYTON_RATE_LIMIT_RPS` | Burst size for the same token bucket |
+
+`GET /api/v1/machines` supports `?limit=` (default 50, max 500) and `?cursor=` (from a previous response's `nextCursor`) for pagination, same pattern as `GET /api/v1/events`.
 
 Run `krytonctl doctor` after changing provider settings to validate the environment.
 
@@ -415,7 +420,7 @@ make fmt          # gofmt -w cmd internal
 - Provider-specific behavior stays behind `internal/provider.Provider` — never leak `dockur`/`kubevirt` details into `internal/api`.
 - Never expose a raw provider identifier (namespace/name, compose project) as the primary machine ID — only the stable UUID.
 - New source files need the Apache-2.0 header: `./scripts/add-license-headers.sh`.
-- CI (`.github/workflows/ci.yml`) runs `go vet`, `go test`, builds both binaries, and checks `cmd/krytond/web/app.js` syntax on every push/PR to `main`, then publishes `ghcr.io/zyvorai/kryton` on merge.
+- CI (`.github/workflows/ci.yml`) runs license-header check, `golangci-lint`, `govulncheck`, `gosec`, `go vet`, `go test`, builds both binaries, and checks `cmd/krytond/web/app.js` syntax on every push/PR to `main`; on merge it publishes a multi-arch (`linux/amd64`,`linux/arm64`) `ghcr.io/zyvorai/kryton` image and Trivy-scans it for critical/high CVEs. Dependabot keeps Go modules, the base image, and Actions up to date.
 - Full guidelines: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---

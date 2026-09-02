@@ -57,9 +57,14 @@ type Config struct {
 	CORSOrigins        []string
 	ReconcileInterval  time.Duration
 	ShutdownTimeout    time.Duration
-	Kubernetes         Kubernetes
-	TLS                TLS
-	Dockur             Dockur
+	// RateLimitRPS/RateLimitBurst configure the per-caller API token
+	// bucket (internal/api's rateLimit middleware); RateLimitRPS <= 0
+	// disables rate limiting entirely.
+	RateLimitRPS   int
+	RateLimitBurst int
+	Kubernetes     Kubernetes
+	TLS            TLS
+	Dockur         Dockur
 }
 
 // Dockur configures the dockur provider: which container runtime to
@@ -122,6 +127,8 @@ func Load() (Config, error) {
 		CORSOrigins:        splitCSV(os.Getenv("KRYTON_CORS_ORIGINS")),
 		ReconcileInterval:  durationEnv("KRYTON_RECONCILE_INTERVAL", 30*time.Second),
 		ShutdownTimeout:    durationEnv("KRYTON_SHUTDOWN_TIMEOUT", 15*time.Second),
+		RateLimitRPS:       intEnv("KRYTON_RATE_LIMIT_RPS", 0),
+		RateLimitBurst:     intEnv("KRYTON_RATE_LIMIT_BURST", 0),
 		Kubernetes: Kubernetes{
 			Endpoint:           os.Getenv("KRYTON_KUBERNETES_ENDPOINT"),
 			BearerToken:        os.Getenv("KRYTON_KUBERNETES_BEARER_TOKEN"),

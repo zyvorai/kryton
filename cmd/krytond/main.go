@@ -201,7 +201,9 @@ func main() {
 		AllowInsecure: cfg.AllowInsecure, LabAutoAuth: cfg.LabAutoAuth, LabTokenFile: cfg.LabTokenFile,
 		DefaultProjectEnv: cfg.DefaultProject, ImageNamespaceEnv: cfg.ImageNamespace,
 		StorageConfigPath: storagePath, SettingsConfigPath: settingsPath,
-		CORSOrigins: cfg.CORSOrigins,
+		CORSOrigins:    cfg.CORSOrigins,
+		RateLimitRPS:   cfg.RateLimitRPS,
+		RateLimitBurst: cfg.RateLimitBurst,
 		Jobs: &jobs.Service{
 			Provider: p, Golden: goldenMgr, StorageSetup: storageSetup, Projects: cfg.Projects,
 			DockurData: cfg.Dockur.DataDir, DockurRun: cfg.Dockur.Runtime,

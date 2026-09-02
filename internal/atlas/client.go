@@ -231,7 +231,7 @@ func (c *Client) get(ctx context.Context, path string) (int, string, error) {
 	if err != nil {
 		return 0, "", err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	b, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
 	return res.StatusCode, string(b), nil
 }

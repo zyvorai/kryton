@@ -19,6 +19,7 @@
 package api
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,6 +27,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -81,6 +83,10 @@ type Config struct {
 	StorageConfigPath  string
 	SettingsConfigPath string
 	CORSOrigins        []string
+	// RateLimitRPS/RateLimitBurst configure the per-caller token bucket;
+	// RateLimitRPS <= 0 disables rate limiting (the default).
+	RateLimitRPS   int
+	RateLimitBurst int
 }
 
 // Server is the assembled HTTP API: a single provider.Provider plus the
@@ -117,6 +123,7 @@ type Server struct {
 	imageNamespaceEnv  string
 	storageConfigPath  string
 	settingsConfigPath string
+	rateLimiter        *rateLimiter
 	corsOrigins        []string
 }
 
@@ -129,6 +136,9 @@ type snapshotRequest struct {
 }
 type listResponse[T any] struct {
 	Items []T `json:"items"`
+	// NextCursor, when non-empty, is passed back as ?cursor= to fetch the
+	// next page; its absence means the caller has the last page.
+	NextCursor string `json:"nextCursor,omitempty"`
 }
 type errorEnvelope struct {
 	Error APIError `json:"error"`
@@ -155,6 +165,7 @@ func New(cfg Config) *Server {
 		allowInsecure: cfg.AllowInsecure, labAutoAuth: cfg.LabAutoAuth, labTokenFile: cfg.LabTokenFile,
 		defaultProjectEnv: cfg.DefaultProjectEnv, imageNamespaceEnv: cfg.ImageNamespaceEnv,
 		storageConfigPath: cfg.StorageConfigPath, settingsConfigPath: cfg.SettingsConfigPath, corsOrigins: cfg.CORSOrigins,
+		rateLimiter: newRateLimiter(cfg.RateLimitRPS, cfg.RateLimitBurst),
 	}
 }
 
@@ -213,7 +224,7 @@ func (s *Server) Handler() http.Handler {
 	// Exact match only — a trailing-slash pattern would steal /api/v1/*.
 	root.HandleFunc("GET /api/v1", s.apiDiscovery)
 	root.HandleFunc("GET /api/v1/lab/bootstrap", s.labBootstrap)
-	root.Handle("/api/", s.auth.Middleware(apiMux))
+	root.Handle("/api/", s.auth.Middleware(s.rateLimit(apiMux)))
 	root.Handle("/", s.staticHandler())
 	return s.requestID(s.accessLog(s.cors(s.security(s.recoverer(root)))))
 }
@@ -285,7 +296,55 @@ func (s *Server) listMachines(w http.ResponseWriter, r *http.Request) {
 		s.writeErr(w, r, err)
 		return
 	}
-	jsonResponse(w, http.StatusOK, listResponse[model.Machine]{Items: ms})
+	limit := 50
+	if v, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && v > 0 && v <= 500 {
+		limit = v
+	}
+	page, next, err := paginateMachines(ms, limit, r.URL.Query().Get("cursor"))
+	if err != nil {
+		s.badRequest(w, r, "invalid cursor")
+		return
+	}
+	jsonResponse(w, http.StatusOK, listResponse[model.Machine]{Items: page, NextCursor: next})
+}
+
+// paginateMachines sorts ms by ID for a stable order across calls (the
+// provider gives no ordering guarantee), then returns up to limit items
+// starting just after cursor's machine ID. cursor is the opaque
+// base64-encoded ID returned as NextCursor by the previous page; an empty
+// cursor starts from the beginning. Returns a non-nil error only if cursor
+// is not validly base64-encoded.
+func paginateMachines(ms []model.Machine, limit int, cursor string) (page []model.Machine, nextCursor string, err error) {
+	sort.Slice(ms, func(i, j int) bool { return ms[i].ID < ms[j].ID })
+	start := 0
+	if cursor != "" {
+		afterID, decErr := decodeMachineCursor(cursor)
+		if decErr != nil {
+			return nil, "", decErr
+		}
+		start = sort.Search(len(ms), func(i int) bool { return ms[i].ID > afterID })
+	}
+	end := start + limit
+	if end > len(ms) {
+		end = len(ms)
+	}
+	page = ms[start:end]
+	if end < len(ms) {
+		nextCursor = encodeMachineCursor(page[len(page)-1].ID)
+	}
+	return page, nextCursor, nil
+}
+
+func encodeMachineCursor(id string) string {
+	return base64.RawURLEncoding.EncodeToString([]byte(id))
+}
+
+func decodeMachineCursor(cursor string) (string, error) {
+	b, err := base64.RawURLEncoding.DecodeString(cursor)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 func (s *Server) getMachine(w http.ResponseWriter, r *http.Request) {
 	project, ok := s.requireProject(w, r, auth.Viewer)
@@ -507,7 +566,7 @@ func (s *Server) streamEvents(w http.ResponseWriter, r *http.Request) {
 	p := auth.FromContext(r.Context())
 	ch, cancel := s.events.Subscribe()
 	defer cancel()
-	fmt.Fprint(w, ": kryton event stream\n\n")
+	_, _ = fmt.Fprint(w, ": kryton event stream\n\n")
 	flusher.Flush()
 	ticker := time.NewTicker(20 * time.Second)
 	defer ticker.Stop()
@@ -516,7 +575,7 @@ func (s *Server) streamEvents(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case <-ticker.C:
-			fmt.Fprint(w, ": keepalive\n\n")
+			_, _ = fmt.Fprint(w, ": keepalive\n\n")
 			flusher.Flush()
 		case e, open := <-ch:
 			if !open {
@@ -526,7 +585,7 @@ func (s *Server) streamEvents(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			b, _ := json.Marshal(e)
-			fmt.Fprintf(w, "id: %s\nevent: cloudevent\ndata: %s\n\n", e.ID, b)
+			_, _ = fmt.Fprintf(w, "id: %s\nevent: cloudevent\ndata: %s\n\n", e.ID, b)
 			flusher.Flush()
 		}
 	}

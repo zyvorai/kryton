@@ -36,7 +36,7 @@ func (c *Client) ProxyVNC(w http.ResponseWriter, r *http.Request, namespace, vmi
 	if err != nil {
 		return err
 	}
-	defer clientConn.Close()
+	defer func() { _ = clientConn.Close() }()
 
 	path := fmt.Sprintf("/apis/subresources.kubevirt.io/v1/namespaces/%s/virtualmachineinstances/%s/vnc", url.PathEscape(namespace), url.PathEscape(vmi))
 	u := *c.base
@@ -63,7 +63,7 @@ func (c *Client) ProxyVNC(w http.ResponseWriter, r *http.Request, namespace, vmi
 		}
 		return fmt.Errorf("dial kubevirt vnc: %w", err)
 	}
-	defer backend.Close()
+	defer func() { _ = backend.Close() }()
 
 	errCh := make(chan error, 2)
 	copyWS := func(dst, src *websocket.Conn) {

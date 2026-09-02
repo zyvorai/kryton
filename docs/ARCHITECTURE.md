@@ -54,6 +54,17 @@ The dockur provider maps UUIDs to compose project directories. The demo provider
 
 ---
 
+## Single-replica today
+
+Run exactly one `krytond` replica. Two in-process pieces of state make more than one unsafe right now:
+
+- **`internal/reconciler/ttl.go`** has no leader election — every replica independently lists and expires the same machines on its own timer, which is at best redundant work and at worst a race between replicas' `Delete` calls.
+- **`internal/events/events.go`**'s `Bus` holds its event history and SSE subscriber set purely in-process (an in-memory ring buffer, optionally mirrored to a local JSONL file) — with multiple replicas, `GET /api/v1/events` and `GET /api/v1/events/stream` return different results depending on which pod a client's connection or load-balanced request lands on.
+
+The Helm chart's `deploy/helm/kryton/values.yaml` pins `replicaCount: 1` and ships a `podDisruptionBudget` template disabled by default for the same reason. Scaling `krytond` out requires either a leader-elected TTL loop (e.g. a Kubernetes Lease) or moving it to a single CronJob, plus a shared events backend (e.g. Redis/DB-backed, or a single-writer SSE fan-out) — neither exists today. This is distinct from [GA.md](GA.md)'s "Live migration / HA replicas" note, which is about the KubeVirt **guest VM**, not krytond itself.
+
+---
+
 ## Projects
 
 Kryton projects map to provider isolation domains:

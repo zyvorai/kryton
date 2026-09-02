@@ -1,6 +1,6 @@
 # Copyright 2026 Kryton contributors
 # SPDX-License-Identifier: Apache-2.0
-.PHONY: run build test race vet fmt check demo image deploy-remote harden-lab bootstrap-kubevirt setup-kubevirt setup-kubevirt-production run-kubevirt-production-remote build-golden enable-kubevirt-snapshots enable-rook-ceph
+.PHONY: run build test race vet fmt check vulncheck lint demo image deploy-remote harden-lab bootstrap-kubevirt setup-kubevirt setup-kubevirt-production run-kubevirt-production-remote build-golden enable-kubevirt-snapshots enable-rook-ceph
 
 run:
 	go run ./cmd/krytond
@@ -24,6 +24,12 @@ vet:
 
 fmt:
 	gofmt -w cmd internal
+
+vulncheck:
+	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+lint:
+	golangci-lint run ./...
 
 check: fmt test vet build
 

@@ -244,7 +244,7 @@ func (c client) do(method, path string, body any) {
 	if err != nil {
 		fatal(err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	b, _ := io.ReadAll(res.Body)
 	var pretty bytes.Buffer
 	if json.Indent(&pretty, b, "", "  ") == nil {
