@@ -15,6 +15,27 @@ For narrative release write-ups (what changed and why, aimed at operators), see 
 - Apache-2.0 license headers applied across all Go, shell, web, and OpenAPI source files (`scripts/add-license-headers.sh`).
 - README table of contents, full project-layout tree, and a Development section (make targets, provider-boundary rules, CI summary).
 - Helm chart `README.md` documenting `values.yaml` keys, the four values overlays, the auth-secret contract, and RBAC scope.
+- Per-symbol godoc comments across `internal/`/`cmd/` exported types and functions.
+- **API rate limiting** — `KRYTON_RATE_LIMIT_RPS`/`KRYTON_RATE_LIMIT_BURST` (Helm: `rateLimit.rps`/`.burst`), a per-caller token bucket keyed by API-key name (or remote address when auth is disabled); disabled by default. Returns `429`/`RATE_LIMITED`.
+- **Pagination** on `GET /api/v1/machines` — `?limit=` (default 50, max 500) and `?cursor=`, returning `nextCursor` in the response envelope, matching the existing `GET /api/v1/events` pattern.
+- **Helm**: `serviceMonitor` (Prometheus Operator scrape config for `/metrics`) and `podDisruptionBudget` templates, both disabled by default.
+- CI: license-header check, `golangci-lint`, `govulncheck`, `gosec`, and a Trivy image scan on the multi-arch (`linux/amd64`,`linux/arm64`) image build; `.github/dependabot.yml` for Go modules, the Docker base image, and Actions.
+- GitHub PR template and bug/feature issue templates under `.github/`.
+- `--port <N>` flag on `scripts/deploy-remote.sh` (previously only settable via `KRYTON_PORT`).
+- Expanded unit test coverage: `internal/reconciler` (0→95.5%), `internal/config` (0→87.9%), `internal/kubeapi` (0→33.6%), `internal/jobs` (0→71.6%), `internal/catalog` (0→100%), `internal/images` (0→70.7%), plus additions to `internal/api`, `internal/doctor`, and `internal/storage`.
+
+### Fixed
+
+- Helm chart pods failing to start under the chart's own default hardened security context: `podSecurityContext`/`containerSecurityContext` now set an explicit numeric `runAsUser`/`runAsGroup: 65532` (some kubelet/containerd versions can't verify `runAsNonRoot` against the distroless image's named `nonroot` user without one), and `KRYTON_STORAGE_CONFIG_FILE`/`KRYTON_SETTINGS_CONFIG_FILE` now point at an `emptyDir`-backed `/var/lib/kryton` so `readOnlyRootFilesystem: true` doesn't block krytond's local state writes.
+- `go.mod` `gorilla/websocket` `// indirect` drift (it's imported directly, and `golang.org/x/time` for rate limiting is now a direct dependency too).
+- A handful of pre-existing lint findings surfaced by the new `golangci-lint`/`gosec` CI gate: an always-first-item-only loop in `internal/doctor`'s KubeVirt feature-gate check, an unsafe `fmt.Errorf(reason)` with user-controlled content in `internal/storage`, several unchecked `Close()`/`Fprintf` errors, and one dead-code method in `internal/api`.
+
+### Docs
+
+- `docs/API.md`: pagination and rate-limiting sections.
+- `docs/DEPLOYMENT.md`: observability & availability section (ServiceMonitor, PDB, rate limiting, single-replica caveat).
+- `docs/ARCHITECTURE.md` / `docs/GA.md`: documented that `krytond` cannot safely run more than one replica today (TTL reconciler has no leader election; event bus is in-process).
+- `CHANGELOG.md` (this file) and `deploy/helm/kryton/README.md` added.
 
 ## [1.1.0] - 2026-09-01
 

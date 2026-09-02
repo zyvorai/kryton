@@ -31,7 +31,7 @@ POST   /api/v1/golden/{id}/bootstrap
 GET    /api/v1/jobs
 GET    /api/v1/jobs/{id}
 GET    /api/v1/summary?project=<project>
-GET    /api/v1/machines?project=<project>
+GET    /api/v1/machines?project=<project>&limit=<n>&cursor=<opaque>
 POST   /api/v1/machines
 GET    /api/v1/machines/{id}?project=<project>
 GET    /api/v1/machines/{id}/console?project=<project>
@@ -145,7 +145,21 @@ Finding `status` values: `pass` · `warn` · `fail`. CLI equivalent: `krytonctl 
 
 ### List and get
 
-`GET /api/v1/machines?project=default` returns all machines in the project.
+`GET /api/v1/machines?project=default` returns machines in the project, paginated:
+
+| Param | Default | Notes |
+|-------|---------|-------|
+| `limit` | 50 | Max items per page, capped at 500 |
+| `cursor` | *(none)* | Opaque value from the previous response's `nextCursor`; omit for the first page |
+
+```json
+{
+  "items": [ { "id": "…", "…": "…" } ],
+  "nextCursor": "MzY5Y2E3MzctOGJmYy00YTY0LWEyNGUtYzJhMzIwMTgyNzFh"
+}
+```
+
+`nextCursor` is absent on the last page. Machines are ordered by ID for a stable sort across pages — the provider itself gives no ordering guarantee.
 
 `GET /api/v1/machines/{id}?project=default` returns a single machine.
 
@@ -233,7 +247,13 @@ All errors use a consistent envelope:
 }
 ```
 
-Common codes: `INVALID_REQUEST` · `NOT_FOUND` · `FORBIDDEN` · `CONFLICT` · `INTERNAL_ERROR`.
+Common codes: `INVALID_REQUEST` · `NOT_FOUND` · `FORBIDDEN` · `CONFLICT` · `INTERNAL_ERROR` · `RATE_LIMITED`.
+
+---
+
+## Rate limiting
+
+Set `KRYTON_RATE_LIMIT_RPS` (and optionally `KRYTON_RATE_LIMIT_BURST`) to cap requests per caller — a token bucket keyed by API-key name (or remote address when auth is disabled). Disabled by default (`KRYTON_RATE_LIMIT_RPS=0`). Exceeding the limit returns `429` with `error.code: "RATE_LIMITED"`; back off and retry.
 
 ---
 
