@@ -8,7 +8,10 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/zyvorai/kryton
-  tag: "1.0.0"
+  # CI (.github/workflows/ci.yml) only pushes "latest" and "sha-<hash>"
+  # tags on merge to main — there is no version-tagged image today, so
+  # pin to a specific sha-* tag for anything beyond quick evaluation.
+  tag: "latest"
   pullPolicy: IfNotPresent
 
 provider: kubevirt

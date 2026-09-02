@@ -6,6 +6,8 @@ For narrative release write-ups (what changed and why, aimed at operators), see 
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-02
+
 ### Added
 
 - Package-level godoc comments across every `internal/`/`cmd/` package, plus full per-method documentation on the `provider.Provider` interface.
@@ -29,6 +31,7 @@ For narrative release write-ups (what changed and why, aimed at operators), see 
 - Helm chart pods failing to start under the chart's own default hardened security context: `podSecurityContext`/`containerSecurityContext` now set an explicit numeric `runAsUser`/`runAsGroup: 65532` (some kubelet/containerd versions can't verify `runAsNonRoot` against the distroless image's named `nonroot` user without one), and `KRYTON_STORAGE_CONFIG_FILE`/`KRYTON_SETTINGS_CONFIG_FILE` now point at an `emptyDir`-backed `/var/lib/kryton` so `readOnlyRootFilesystem: true` doesn't block krytond's local state writes.
 - `go.mod` `gorilla/websocket` `// indirect` drift (it's imported directly, and `golang.org/x/time` for rate limiting is now a direct dependency too).
 - A handful of pre-existing lint findings surfaced by the new `golangci-lint`/`gosec` CI gate: an always-first-item-only loop in `internal/doctor`'s KubeVirt feature-gate check, an unsafe `fmt.Errorf(reason)` with user-controlled content in `internal/storage`, several unchecked `Close()`/`Fprintf` errors, and one dead-code method in `internal/api`.
+- Helm chart's default `image.tag` pointed at a version (`1.0.0`) that CI never actually publishes (only `latest`/`sha-<hash>` tags exist) — a default `helm install` would fail to pull. Defaults to `latest` now.
 
 ### Docs
 
@@ -80,5 +83,6 @@ Initial public release of Kryton as a production-oriented standalone control pla
 
 The release source is Apache-2.0 licensed and contains no Windows media or activation material.
 
-[Unreleased]: https://github.com/zyvorai/kryton/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/zyvorai/kryton/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/zyvorai/kryton/releases/tag/v1.2.0
 [1.1.0]: https://github.com/zyvorai/kryton/releases/tag/v1.1.0
