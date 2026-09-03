@@ -64,6 +64,23 @@ curl -X POST http://127.0.0.1:9088/api/v1/golden \
 curl http://127.0.0.1:9088/api/v1/golden
 ```
 
+### Gotchas (lab-proven)
+
+- **`FINALIZE` / `IMAGE_ID` must survive re-exec.** Parent env `FINALIZE=1` and an explicit
+  `IMAGE_ID` must not be clobbered by script defaults (fixed in `build-golden-image.sh`).
+  Otherwise “finalize” restarts install instead of capturing, or writes the wrong catalog ID.
+- **One-minute `ready` is not a golden.** Real install + Sysprep is hours. A build that flips
+  to `ready` immediately often captured a mid-Setup disk — VNC shows “Install Windows /
+  restarted unexpectedly”, guest never answers ARP/RDP on `10.0.2.2`.
+- **Progress stuck at ~58%** often means dockur is still installing (watch `:8066`); do not
+  finalize early.
+- **Podman** is supported for builds on hosts without Docker.
+- **CDI PVC size / volumeMode:** virtual disks can be ~80 Gi — bootstrap with **≥96 Gi**.
+  Match Filesystem vs Block between DataSource and clone targets or KubeVirt returns
+  `IncompatibleVolumeModes`.
+- **Catalog aliases:** do not point multiple image IDs at one qcow2 unless the content truly
+  matches (e.g. `windows-11-pro` ≠ Tiny11 Core).
+
 ---
 
 ## 1b. Build details (dockur VERSION codes)
