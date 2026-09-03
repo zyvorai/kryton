@@ -183,6 +183,70 @@ func TestGoldenBootstrapBadRequestWhenNotReady(t *testing.T) {
 	}
 }
 
+func TestGoldenPassportNotFoundWhenManagerNil(t *testing.T) {
+	h := testServerWithGolden(t, nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/golden/b1/passport", nil))
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGoldenPassportNotFoundForUnknownBuild(t *testing.T) {
+	g, err := golden.New(golden.Config{BaseDir: t.TempDir()})
+	if err != nil {
+		t.Fatalf("golden.New: %v", err)
+	}
+	h := testServerWithGolden(t, g)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/golden/does-not-exist/passport", nil))
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGoldenPassportNotFoundWhenNoneRecorded(t *testing.T) {
+	g, err := golden.New(golden.Config{BaseDir: t.TempDir()})
+	if err != nil {
+		t.Fatalf("golden.New: %v", err)
+	}
+	writeGoldenStatus(t, g, "b1", model.GoldenBuild{State: model.GoldenReady, ImageID: "windows-11-enterprise", UpdatedAt: time.Now()})
+	h := testServerWithGolden(t, g)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/golden/b1/passport", nil))
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 (no PassportPath recorded), got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGoldenPassportServesRecordedFile(t *testing.T) {
+	g, err := golden.New(golden.Config{BaseDir: t.TempDir()})
+	if err != nil {
+		t.Fatalf("golden.New: %v", err)
+	}
+	passportPath := filepath.Join(t.TempDir(), "artifact.qcow2.passport.json")
+	body := `{"schemaVersion":"1","kind":"guestkit.cutover_passport","scores":{"boot":92}}`
+	if err := os.WriteFile(passportPath, []byte(body), 0o644); err != nil {
+		t.Fatalf("write passport: %v", err)
+	}
+	writeGoldenStatus(t, g, "b1", model.GoldenBuild{
+		State: model.GoldenReady, ImageID: "windows-11-enterprise",
+		PassportPath: passportPath, UpdatedAt: time.Now(),
+	})
+	h := testServerWithGolden(t, g)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/golden/b1/passport", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	if got := w.Body.String(); got != body {
+		t.Fatalf("expected passport file content passed through verbatim, got %q want %q", got, body)
+	}
+	if ct := w.Header().Get("Content-Type"); ct != "application/json" {
+		t.Fatalf("expected application/json content-type, got %q", ct)
+	}
+}
+
 func TestGoldenListReflectsManagerState(t *testing.T) {
 	g, err := golden.New(golden.Config{BaseDir: t.TempDir()})
 	if err != nil {

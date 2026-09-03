@@ -27,6 +27,7 @@ GET    /api/v1/images
 GET    /api/v1/golden
 POST   /api/v1/golden
 GET    /api/v1/golden/{id}
+GET    /api/v1/golden/{id}/passport      # guestkit Cutover Passport JSON, 404 if none recorded
 POST   /api/v1/golden/{id}/bootstrap
 GET    /api/v1/jobs
 GET    /api/v1/jobs/{id}

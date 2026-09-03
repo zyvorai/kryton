@@ -17,6 +17,8 @@ package api
 import (
 	"errors"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/zyvorai/kryton/internal/auth"
 	"github.com/zyvorai/kryton/internal/golden"
@@ -50,6 +52,36 @@ func (s *Server) goldenGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jsonResponse(w, http.StatusOK, b)
+}
+
+// goldenPassport serves the raw guestkit Cutover Passport JSON recorded for
+// a build (schema: guestkit's src/assurance/passport.rs) — full evidence
+// (BitLocker, VirtIO drivers, activation, hotfixes, blockers, fix plan)
+// behind the certified/validationScore summary already on GET
+// /api/v1/golden/{id}.
+func (s *Server) goldenPassport(w http.ResponseWriter, r *http.Request) {
+	if s.golden == nil {
+		s.writeAPIError(w, r, http.StatusNotFound, "not_found", "golden image builder not available on this instance")
+		return
+	}
+	b, err := s.golden.Get(r.PathValue("id"))
+	if err != nil {
+		s.writeAPIError(w, r, http.StatusNotFound, "not_found", "golden build not found")
+		return
+	}
+	path := strings.TrimSpace(b.PassportPath)
+	if path == "" {
+		s.writeAPIError(w, r, http.StatusNotFound, "not_found", "no guestkit passport recorded for this build (guestkit may not have been installed on the build host)")
+		return
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		s.writeAPIError(w, r, http.StatusNotFound, "not_found", "passport file missing on disk: "+path)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
 }
 
 func (s *Server) goldenStart(w http.ResponseWriter, r *http.Request) {

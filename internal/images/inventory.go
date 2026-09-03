@@ -64,6 +64,7 @@ func (inv *Inventory) apply(img model.Image, stored map[string]string, goldenRea
 	img.StoragePath = ""
 	img.Certified = false
 	img.ValidationScore = 0
+	img.PassportBuildID = ""
 
 	if art, ok := goldenReady[img.ID]; ok {
 		img.Ready = true
@@ -72,6 +73,9 @@ func (inv *Inventory) apply(img model.Image, stored map[string]string, goldenRea
 		img.StoragePath = art.Path
 		img.Certified = art.Certified
 		img.ValidationScore = art.Score
+		if art.HasPassport {
+			img.PassportBuildID = art.BuildID
+		}
 		return img
 	}
 	if ns, ok := stored[img.ID]; ok {
@@ -127,9 +131,11 @@ func (inv *Inventory) dataSources(ctx context.Context) map[string]string {
 // zero-valued when guestkit wasn't available on the build host, or when the
 // artifact was only discovered via the out/ directory glob below).
 type goldenArtifact struct {
-	Path      string
-	Certified bool
-	Score     float64
+	Path        string
+	Certified   bool
+	Score       float64
+	BuildID     string
+	HasPassport bool
 }
 
 func (inv *Inventory) goldenArtifacts() map[string]goldenArtifact {
@@ -139,7 +145,10 @@ func (inv *Inventory) goldenArtifacts() map[string]goldenArtifact {
 		if err == nil {
 			for _, b := range builds {
 				if b.State == model.GoldenReady && b.OutputPath != "" {
-					out[b.ImageID] = goldenArtifact{Path: b.OutputPath, Certified: b.Certified, Score: b.ValidationScore}
+					out[b.ImageID] = goldenArtifact{
+						Path: b.OutputPath, Certified: b.Certified, Score: b.ValidationScore,
+						BuildID: b.ID, HasPassport: b.PassportPath != "",
+					}
 				}
 			}
 		}

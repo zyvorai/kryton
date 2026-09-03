@@ -60,6 +60,11 @@ type GoldenBuild struct {
 	// host. A false Certified never blocks Bootstrap — it's informational.
 	Certified       bool    `json:"certified,omitempty"`
 	ValidationScore float64 `json:"validationScore,omitempty"`
+	// PassportPath is the guestkit Cutover Passport JSON emitted alongside
+	// the gate (BitLocker/VirtIO/activation flags, blockers, fix plan);
+	// empty when guestkit wasn't available. Served via GET
+	// /api/v1/golden/{id}/passport.
+	PassportPath string `json:"passportPath,omitempty"`
 }
 
 // GoldenStartRequest is the payload for starting a new golden-image build.

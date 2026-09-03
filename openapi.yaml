@@ -178,6 +178,15 @@ paths:
       responses:
         '200': {description: Build}
         '404': {description: Not found}
+  /api/v1/golden/{id}/passport:
+    get:
+      tags: [images]
+      summary: guestkit Cutover Passport (boot/migration evidence) for this build
+      parameters:
+        - $ref: '#/components/parameters/GoldenID'
+      responses:
+        '200': {description: Passport JSON}
+        '404': {description: No passport recorded for this build}
   /api/v1/golden/{id}/bootstrap:
     post:
       tags: [images]

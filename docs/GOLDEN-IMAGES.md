@@ -93,6 +93,16 @@ run the whole script as root, consistent with `scripts/e2e-kryton-golden-host.sh
 existing host-level access assumption). `krytonctl doctor` reports whether
 `guestkit` is installed (informational, not a failure).
 
+Right after the gate, the same guestkit binary emits a full [Cutover
+Passport](https://github.com/zyvorai/guestkit) (`guestkit passport emit`) — the
+evidence behind the score: BitLocker/VirtIO/activation/hotfix flags, critical
+blockers, and a fix plan. It's written next to the qcow2
+(`<qcow2>.passport.json`), recorded as `GoldenBuild.passportPath`, and served
+raw at `GET /api/v1/golden/{id}/passport` (404 if guestkit wasn't available at
+build time). The Images page's golden-image panel links to it as **View
+passport** once a build reaches `ready`, alongside a Certified/score badge —
+and stored golden images show the same Certified badge on their catalog card.
+
 ### Gotchas (lab-proven)
 
 - **`FINALIZE` / `IMAGE_ID` must survive re-exec.** Parent env `FINALIZE=1` and an explicit

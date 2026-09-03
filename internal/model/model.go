@@ -190,6 +190,9 @@ type Image struct {
 	// or guestkit wasn't available at build time.
 	Certified       bool    `json:"certified,omitempty"`
 	ValidationScore float64 `json:"validationScore,omitempty"`
+	// PassportBuildID, when set, is the golden build ID whose guestkit
+	// Cutover Passport is fetchable at GET /api/v1/golden/{id}/passport.
+	PassportBuildID string `json:"passportBuildId,omitempty"`
 }
 
 // Capabilities advertises which optional features a Provider supports,

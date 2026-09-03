@@ -96,6 +96,7 @@ func allAPIEndpoints() []apiEndpoint {
 		{Method: "GET", Path: "/api/v1/golden", Group: "images", Description: "Golden builds"},
 		{Method: "POST", Path: "/api/v1/golden", Group: "images", Description: "Start golden build"},
 		{Method: "GET", Path: "/api/v1/golden/{id}", Group: "images", Description: "Golden build"},
+		{Method: "GET", Path: "/api/v1/golden/{id}/passport", Group: "images", Description: "guestkit Cutover Passport"},
 		{Method: "POST", Path: "/api/v1/golden/{id}/bootstrap", Group: "images", Description: "Publish to CDI"},
 		{Method: "GET", Path: "/api/v1/jobs", Group: "jobs", Description: "List jobs"},
 		{Method: "GET", Path: "/api/v1/jobs/{id}", Group: "jobs", Description: "Get job"},

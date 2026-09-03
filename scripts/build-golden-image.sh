@@ -139,7 +139,8 @@ write_status() {
   "updatedAt": "${now}",
   "error": "${err}",
   "certified": ${CERTIFIED:-false},
-  "validationScore": ${VALIDATION_SCORE:-null}
+  "validationScore": ${VALIDATION_SCORE:-null},
+  "passportPath": "${PASSPORT_PATH:-}"
 }
 JSON
   log_line info "${message}"
@@ -184,6 +185,7 @@ if [[ "${FINALIZE:-0}" == "1" ]]; then
   GUESTKIT_MIN_SCORE="${GUESTKIT_MIN_SCORE:-70}"
   CERTIFIED="false"
   VALIDATION_SCORE="null"
+  PASSPORT_PATH=""
   if [[ "${SKIP_GUESTKIT:-0}" == "1" ]]; then
     log_line warn "guestkit validation skipped (SKIP_GUESTKIT=1)"
   elif ! command -v "${GUESTKIT_BIN}" >/dev/null 2>&1; then
@@ -204,6 +206,18 @@ try:
 except Exception:
   print("")' "${GK_REPORT}" 2>/dev/null || true)"
     [[ -n "${SCORE}" ]] && VALIDATION_SCORE="${SCORE}"
+
+    # Full evidence record (BitLocker/VirtIO/activation/hotfix flags, fix
+    # plan, blockers) — kept alongside the gate's pass/fail summary above so
+    # operators can inspect *why*, not just the score.
+    CANDIDATE_PASSPORT="${OUT}.passport.json"
+    if sudo "${GUESTKIT_BIN}" passport emit "${OUT}" --target kvm -o "${CANDIDATE_PASSPORT}" >>"${JOB_LOG}" 2>&1; then
+      sudo chmod 0644 "${CANDIDATE_PASSPORT}" 2>/dev/null || true
+      PASSPORT_PATH="${CANDIDATE_PASSPORT}"
+      log_line ok "guestkit passport emitted: ${PASSPORT_PATH}"
+    else
+      log_line warn "guestkit passport emit failed - continuing without a passport"
+    fi
   fi
 
   write_status "ready" "complete" 100 "Golden image ready" "" "${OUT}" "" "${SHA}"
