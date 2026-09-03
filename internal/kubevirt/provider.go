@@ -174,9 +174,16 @@ func (p *Provider) Create(ctx context.Context, project string, spec model.Machin
 	storage := map[string]any{
 		"resources":   map[string]any{"requests": map[string]any{"storage": fmt.Sprintf("%dGi", spec.Disk.SizeGiB)}},
 		"accessModes": []any{"ReadWriteOnce"},
+		// CDI rejects Block↔Filesystem clones ("IncompatibleVolumeModes").
+		// HTTP-imported goldens use Filesystem; omitting volumeMode lets RBD CSI
+		// default the target to Block and the clone hangs forever in Pending.
+		"volumeMode": "Filesystem",
 	}
 	if sc := firstNonEmpty(spec.Disk.StorageClass, p.StorageClass()); sc != "" {
 		storage["storageClassName"] = sc
+	}
+	if vm := strings.TrimSpace(spec.Disk.VolumeMode); vm != "" {
+		storage["volumeMode"] = vm
 	}
 	vm := map[string]any{
 		"apiVersion": "kubevirt.io/v1", "kind": "VirtualMachine",
