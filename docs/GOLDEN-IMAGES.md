@@ -64,6 +64,35 @@ curl -X POST http://127.0.0.1:9088/api/v1/golden \
 curl http://127.0.0.1:9088/api/v1/golden
 ```
 
+### Boot-readiness gate (guestkit)
+
+If [`guestkit`](https://github.com/zyvorai/guestkit) is on the build host's `PATH`,
+`build-golden-image.sh` runs `guestkit gate` against the captured qcow2 right after
+`qemu-img convert`/`check`, before the build is marked `ready`. This **flags, it
+doesn't block**: a low score or a missing binary still lets the build reach
+`ready` — it just records `certified`/`validationScore` on the `GoldenBuild` (and
+on the catalog `Image` once bootstrapped) so operators see boot-readiness before
+publishing to KubeVirt, instead of finding out at cutover.
+
+```bash
+# Install once per build host (Linux amd64):
+curl -fsSL -o guestkit.tar.gz \
+  https://github.com/zyvorai/guestkit/releases/latest/download/guestkit-linux-amd64.tar.gz
+tar xzf guestkit.tar.gz && sudo install -m755 guestkit /usr/local/bin/
+```
+
+| Env var | Default | Meaning |
+|---------|---------|---------|
+| `GUESTKIT_BIN` | `guestkit` | Binary name/path to invoke |
+| `GUESTKIT_MIN_SCORE` | `70` | `--fail-below` passed to `guestkit gate` |
+| `SKIP_GUESTKIT` | `0` | Set `1` to skip the gate entirely on hosts without guestkit |
+
+`guestkit gate` needs root to mount the disk via NBD/loop, so the FINALIZE step
+runs it under `sudo` — make sure the build-host user has passwordless `sudo` (or
+run the whole script as root, consistent with `scripts/e2e-kryton-golden-host.sh`'s
+existing host-level access assumption). `krytonctl doctor` reports whether
+`guestkit` is installed (informational, not a failure).
+
 ### Gotchas (lab-proven)
 
 - **`FINALIZE` / `IMAGE_ID` must survive re-exec.** Parent env `FINALIZE=1` and an explicit
@@ -71,7 +100,9 @@ curl http://127.0.0.1:9088/api/v1/golden
   Otherwise “finalize” restarts install instead of capturing, or writes the wrong catalog ID.
 - **One-minute `ready` is not a golden.** Real install + Sysprep is hours. A build that flips
   to `ready` immediately often captured a mid-Setup disk — VNC shows “Install Windows /
-  restarted unexpectedly”, guest never answers ARP/RDP on `10.0.2.2`.
+  restarted unexpectedly”, guest never answers ARP/RDP on `10.0.2.2`. With `guestkit` installed
+  on the build host, this is now caught automatically: the gate's EFI/BCD checks (BOOT-012/013/014)
+  flag `certified=false` on exactly this class of disk — see [Boot-readiness gate](#boot-readiness-gate-guestkit) above.
 - **Progress stuck at ~58%** often means dockur is still installing (watch `:8066`); do not
   finalize early.
 - **Podman** is supported for builds on hosts without Docker.

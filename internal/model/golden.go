@@ -54,6 +54,12 @@ type GoldenBuild struct {
 	BootstrapState   string `json:"bootstrapState,omitempty"`
 	BootstrapMessage string `json:"bootstrapMessage,omitempty"`
 	DataSource       string `json:"dataSource,omitempty"`
+	// Certified and ValidationScore come from an offline guestkit gate
+	// (github.com/zyvorai/guestkit) run against OutputPath during capture;
+	// both stay zero-valued when guestkit wasn't available on the build
+	// host. A false Certified never blocks Bootstrap — it's informational.
+	Certified       bool    `json:"certified,omitempty"`
+	ValidationScore float64 `json:"validationScore,omitempty"`
 }
 
 // GoldenStartRequest is the payload for starting a new golden-image build.

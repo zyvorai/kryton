@@ -59,6 +59,9 @@ type DiskSpec struct {
 	// StorageClass overrides the provider/cluster default StorageClass
 	// (kubevirt only; ignored by demo and dockur).
 	StorageClass string `json:"storageClass,omitempty"`
+	// VolumeMode is Filesystem or Block (kubevirt only). Empty defaults to
+	// Filesystem so CDI clones of HTTP-imported golden PVCs succeed.
+	VolumeMode string `json:"volumeMode,omitempty"`
 }
 
 // NetworkSpec selects a provider-specific network attachment.
@@ -181,6 +184,12 @@ type Image struct {
 	StoragePath      string   `json:"storagePath,omitempty"`
 	// Ready is true once the underlying disk/DataSource is actually usable for Create.
 	Ready bool `json:"ready"`
+	// Certified/ValidationScore mirror the guestkit boot-readiness gate
+	// recorded on the golden.GoldenBuild this image was captured from (see
+	// internal/images.Inventory); unset when the image isn't golden-sourced
+	// or guestkit wasn't available at build time.
+	Certified       bool    `json:"certified,omitempty"`
+	ValidationScore float64 `json:"validationScore,omitempty"`
 }
 
 // Capabilities advertises which optional features a Provider supports,

@@ -63,6 +63,7 @@ func Run(ctx context.Context, in Input) model.DoctorReport {
 	add(checkProjects(in.Projects))
 	add(checkCatalog(in.Catalog))
 	add(checkProviderHealth(ctx, in.Provider))
+	add(checkGuestkit())
 
 	switch in.Provider.Name() {
 	case "dockur":
@@ -143,6 +144,22 @@ func checkBinary(name, purpose string) model.DoctorFinding {
 		return model.DoctorFinding{Check: "runtime", Status: "fail", Message: fmt.Sprintf("%s not found in PATH", name), Hint: purpose}
 	}
 	return model.DoctorFinding{Check: "runtime", Status: "pass", Message: fmt.Sprintf("%s found at %s", name, path)}
+}
+
+// checkGuestkit reports whether guestkit (github.com/zyvorai/guestkit) is on
+// PATH; unlike checkBinary this is a warn, not a fail — the golden-image
+// boot-readiness gate in scripts/build-golden-image.sh degrades gracefully
+// (flags certified=false, never blocks) when guestkit isn't installed.
+func checkGuestkit() model.DoctorFinding {
+	path, err := exec.LookPath("guestkit")
+	if err != nil {
+		return model.DoctorFinding{
+			Check: "guestkit", Status: "warn",
+			Message: "guestkit not found in PATH",
+			Hint:    "Install guestkit (github.com/zyvorai/guestkit releases) to auto-certify golden qcow2 boot readiness during scripts/build-golden-image.sh",
+		}
+	}
+	return model.DoctorFinding{Check: "guestkit", Status: "pass", Message: fmt.Sprintf("guestkit found at %s", path)}
 }
 
 func checkCompose(runtime string) model.DoctorFinding {

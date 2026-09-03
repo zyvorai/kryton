@@ -256,8 +256,10 @@ func goldenStepIndex(b model.GoldenBuild) int {
 		return 3
 	case "generalize", "sysprep":
 		return 4
-	case "convert", "complete":
+	case "convert":
 		return 5
+	case "validate", "complete":
+		return 6
 	}
 	switch b.State {
 	case model.GoldenCapturing:
@@ -278,6 +280,7 @@ func goldenSteps(active int, detail string) []model.JobStep {
 		"Install Windows",
 		"Sysprep generalize",
 		"Capture golden qcow2",
+		"Validate with guestkit",
 	}
 	steps := make([]model.JobStep, len(labels))
 	for i, label := range labels {

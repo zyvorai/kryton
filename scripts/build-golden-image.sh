@@ -137,7 +137,9 @@ write_status() {
   "sha256": "${sha}",
   "startedAt": "${started}",
   "updatedAt": "${now}",
-  "error": "${err}"
+  "error": "${err}",
+  "certified": ${CERTIFIED:-false},
+  "validationScore": ${VALIDATION_SCORE:-null}
 }
 JSON
   log_line info "${message}"
@@ -172,8 +174,40 @@ if [[ "${FINALIZE:-0}" == "1" ]]; then
   mv "${TMP}" "${OUT}"
   SHA="$(sha256sum "${OUT}" | awk '{print $1}')"
   echo "${SHA}" >"${OUT}.sha256"
+
+  # Offline boot-readiness gate (guestkit, https://github.com/zyvorai/guestkit).
+  # Flags, never blocks: a low score or missing binary still lets the build
+  # reach "ready" — CERTIFIED/VALIDATION_SCORE just record what guestkit saw
+  # so operators see it before bootstrapping into KubeVirt. See the
+  # "One-minute ready is not a golden" gotcha in docs/GOLDEN-IMAGES.md.
+  GUESTKIT_BIN="${GUESTKIT_BIN:-guestkit}"
+  GUESTKIT_MIN_SCORE="${GUESTKIT_MIN_SCORE:-70}"
+  CERTIFIED="false"
+  VALIDATION_SCORE="null"
+  if [[ "${SKIP_GUESTKIT:-0}" == "1" ]]; then
+    log_line warn "guestkit validation skipped (SKIP_GUESTKIT=1)"
+  elif ! command -v "${GUESTKIT_BIN}" >/dev/null 2>&1; then
+    log_line warn "guestkit not found on PATH - skipping boot-readiness gate"
+  else
+    write_status "capturing" "validate" 94 "Validating boot readiness with guestkit" "" "${OUT}"
+    GK_REPORT="${OUT}.guestkit-gate.json"
+    if sudo "${GUESTKIT_BIN}" gate --image "${OUT}" --target kvm \
+         --fail-below "${GUESTKIT_MIN_SCORE}" -o json >"${GK_REPORT}" 2>&1; then
+      CERTIFIED="true"
+      log_line ok "guestkit gate passed (>= ${GUESTKIT_MIN_SCORE})"
+    else
+      log_line warn "guestkit gate flagged this image as not boot-certified (below ${GUESTKIT_MIN_SCORE}, see ${GK_REPORT}) - continuing, not blocking"
+    fi
+    SCORE="$(python3 -c 'import json,sys
+try:
+  print(json.load(open(sys.argv[1])).get("boot",{}).get("score",""))
+except Exception:
+  print("")' "${GK_REPORT}" 2>/dev/null || true)"
+    [[ -n "${SCORE}" ]] && VALIDATION_SCORE="${SCORE}"
+  fi
+
   write_status "ready" "complete" 100 "Golden image ready" "" "${OUT}" "" "${SHA}"
-  echo "✓ Golden image ready: ${OUT}"
+  echo "✓ Golden image ready: ${OUT} (certified=${CERTIFIED})"
   echo "  Next: KRYTON_WINDOWS_IMAGE=${OUT} KRYTON_IMAGE_ID=${IMAGE_ID} ${SCRIPT_DIR}/bootstrap-kubevirt-images.sh"
   exit 0
 fi

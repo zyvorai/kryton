@@ -57,17 +57,21 @@ func (inv *Inventory) Enrich(ctx context.Context, cat *catalog.Catalog) []model.
 	return out
 }
 
-func (inv *Inventory) apply(img model.Image, stored map[string]string, goldenReady map[string]string) model.Image {
+func (inv *Inventory) apply(img model.Image, stored map[string]string, goldenReady map[string]goldenArtifact) model.Image {
 	img.Ready = false
 	img.Availability = "catalog"
 	img.StorageSource = ""
 	img.StoragePath = ""
+	img.Certified = false
+	img.ValidationScore = 0
 
-	if path, ok := goldenReady[img.ID]; ok {
+	if art, ok := goldenReady[img.ID]; ok {
 		img.Ready = true
 		img.Availability = "stored"
 		img.StorageSource = "golden"
-		img.StoragePath = path
+		img.StoragePath = art.Path
+		img.Certified = art.Certified
+		img.ValidationScore = art.Score
 		return img
 	}
 	if ns, ok := stored[img.ID]; ok {
@@ -118,14 +122,24 @@ func (inv *Inventory) dataSources(ctx context.Context) map[string]string {
 	return out
 }
 
-func (inv *Inventory) goldenArtifacts() map[string]string {
-	out := map[string]string{}
+// goldenArtifact is a golden-build qcow2 known to be ready, plus whatever
+// guestkit boot-readiness gate build-golden-image.sh recorded for it (both
+// zero-valued when guestkit wasn't available on the build host, or when the
+// artifact was only discovered via the out/ directory glob below).
+type goldenArtifact struct {
+	Path      string
+	Certified bool
+	Score     float64
+}
+
+func (inv *Inventory) goldenArtifacts() map[string]goldenArtifact {
+	out := map[string]goldenArtifact{}
 	if inv.Golden != nil {
 		builds, err := inv.Golden.List()
 		if err == nil {
 			for _, b := range builds {
 				if b.State == model.GoldenReady && b.OutputPath != "" {
-					out[b.ImageID] = b.OutputPath
+					out[b.ImageID] = goldenArtifact{Path: b.OutputPath, Certified: b.Certified, Score: b.ValidationScore}
 				}
 			}
 		}
@@ -139,7 +153,9 @@ func (inv *Inventory) goldenArtifacts() map[string]string {
 		base := filepath.Base(path)
 		id := goldenIDFromFilename(base)
 		if id != "" {
-			out[id] = path
+			if _, ok := out[id]; !ok {
+				out[id] = goldenArtifact{Path: path}
+			}
 		}
 	}
 	// Also scan ~/.kryton golden outputs referenced in status

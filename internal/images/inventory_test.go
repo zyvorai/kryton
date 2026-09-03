@@ -26,7 +26,7 @@ func TestApplyPriorityGoldenOverCDI(t *testing.T) {
 	inv := &Inventory{Provider: "kubevirt"}
 	img := model.Image{ID: "windows-11-enterprise", DockurVersion: "11e"}
 	stored := map[string]string{"windows-11-enterprise": "kryton-images"}
-	golden := map[string]string{"windows-11-enterprise": "/out/windows-11e-golden.qcow2"}
+	golden := map[string]goldenArtifact{"windows-11-enterprise": {Path: "/out/windows-11e-golden.qcow2", Certified: true, Score: 92}}
 
 	got := inv.apply(img, stored, golden)
 	if !got.Ready || got.Availability != "stored" || got.StorageSource != "golden" {
@@ -35,6 +35,9 @@ func TestApplyPriorityGoldenOverCDI(t *testing.T) {
 	if got.StoragePath != "/out/windows-11e-golden.qcow2" {
 		t.Fatalf("expected StoragePath from golden artifact, got %q", got.StoragePath)
 	}
+	if !got.Certified || got.ValidationScore != 92 {
+		t.Fatalf("expected Certified/ValidationScore propagated from golden artifact, got %+v", got)
+	}
 }
 
 func TestApplyPriorityCDIOverDockur(t *testing.T) {
@@ -42,7 +45,7 @@ func TestApplyPriorityCDIOverDockur(t *testing.T) {
 	img := model.Image{ID: "windows-11-enterprise", DockurVersion: "11e"}
 	stored := map[string]string{"windows-11-enterprise": "kryton-images"}
 
-	got := inv.apply(img, stored, map[string]string{})
+	got := inv.apply(img, stored, map[string]goldenArtifact{})
 	if !got.Ready || got.Availability != "stored" || got.StorageSource != "cdi" {
 		t.Fatalf("expected CDI to win over dockur on-demand, got %+v", got)
 	}
@@ -55,7 +58,7 @@ func TestApplyDockurOnDemand(t *testing.T) {
 	inv := &Inventory{Provider: "dockur"}
 	img := model.Image{ID: "windows-11-enterprise", DockurVersion: "11e"}
 
-	got := inv.apply(img, map[string]string{}, map[string]string{})
+	got := inv.apply(img, map[string]string{}, map[string]goldenArtifact{})
 	if !got.Ready || got.Availability != "on-demand" || got.StorageSource != "dockur" {
 		t.Fatalf("expected dockur on-demand, got %+v", got)
 	}
@@ -65,7 +68,7 @@ func TestApplyDockurProviderWithoutVersionNotReady(t *testing.T) {
 	inv := &Inventory{Provider: "dockur"}
 	img := model.Image{ID: "custom", DockurVersion: ""}
 
-	got := inv.apply(img, map[string]string{}, map[string]string{})
+	got := inv.apply(img, map[string]string{}, map[string]goldenArtifact{})
 	if got.Ready || got.Availability != "catalog" {
 		t.Fatalf("expected catalog-only when dockur has no version mapping, got %+v", got)
 	}
@@ -75,7 +78,7 @@ func TestApplyDemoAlwaysOnDemand(t *testing.T) {
 	inv := &Inventory{Provider: "demo"}
 	img := model.Image{ID: "anything"}
 
-	got := inv.apply(img, map[string]string{}, map[string]string{})
+	got := inv.apply(img, map[string]string{}, map[string]goldenArtifact{})
 	if !got.Ready || got.Availability != "on-demand" || got.StorageSource != "demo" {
 		t.Fatalf("expected demo on-demand, got %+v", got)
 	}
@@ -85,7 +88,7 @@ func TestApplyKubevirtNoStorageNotReady(t *testing.T) {
 	inv := &Inventory{Provider: "kubevirt"}
 	img := model.Image{ID: "windows-11-enterprise"}
 
-	got := inv.apply(img, map[string]string{}, map[string]string{})
+	got := inv.apply(img, map[string]string{}, map[string]goldenArtifact{})
 	if got.Ready || got.Availability != "catalog" {
 		t.Fatalf("expected not ready when kubevirt has no matching DataSource/golden artifact, got %+v", got)
 	}
