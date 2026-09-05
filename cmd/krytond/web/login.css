@@ -58,6 +58,11 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Auth gate must never inherit .login-page { position:relative } — that parked it under the app shell. */
+.auth-backdrop.login-page {
+  position: fixed !important;
+}
+
 html[data-theme='tahoe-light'] .login-page,
 html[data-ui-shell='default'] .login-page,
 .login-page.zeus-login {
@@ -66,11 +71,13 @@ html[data-ui-shell='default'] .login-page,
   color: hsl(240 6% 10%);
 }
 
-/* Full-viewport snap scroll between hero + sign-in chapters */
+/* Full-viewport chapters — no snap (snap + smooth scrollIntoView caused flicker) */
 .login-store-page {
   overflow: hidden;
   height: 100dvh;
   max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
 .login-store-scroll {
@@ -78,7 +85,7 @@ html[data-ui-shell='default'] .login-page,
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  scroll-snap-type: y proximity;
+  scroll-snap-type: none;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -93,22 +100,21 @@ html[data-ui-shell='default'] .login-page,
   width: 100%;
   min-height: 100%;
   min-height: 100dvh;
-  scroll-snap-align: start;
-  scroll-snap-stop: normal;
+  scroll-snap-align: none;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
-  padding: clamp(2rem, 6vh, 4rem) clamp(1.25rem, 5vw, 3rem);
+  padding: clamp(4.5rem, 8vh, 5.5rem) clamp(1.25rem, 5vw, 3rem) clamp(2rem, 5vh, 3rem);
 }
 
 .login-chapter-hero {
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  overflow: visible;
   background: hsl(0 0% 100%);
   text-align: center;
-  animation: login-fade-in-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: none;
 }
 
 .login-chapter-hero::before {
@@ -165,7 +171,7 @@ html[data-ui-shell='default'] .login-page,
 .login-hero-title {
   margin: 0.75rem 0 0;
   font-family: var(--font-display, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif);
-  font-size: clamp(2.75rem, 8vw, 5rem);
+  font-size: clamp(2.25rem, 6.5vw, 4.25rem);
   font-weight: 600;
   letter-spacing: -0.045em;
   line-height: 1.05;
@@ -175,12 +181,28 @@ html[data-ui-shell='default'] .login-page,
 
 .login-tagline {
   margin: 1rem auto 0;
-  max-width: 34rem;
+  max-width: 36rem;
   color: hsl(240 3% 46%);
   letter-spacing: -0.011em;
-  font-size: clamp(1.05rem, 2.1vw, 1.3125rem);
-  line-height: 1.47;
+  font-size: clamp(1rem, 1.9vw, 1.2rem);
+  line-height: 1.45;
   font-weight: 400;
+}
+
+.login-tagline-soft {
+  margin-top: 0.55rem;
+  max-width: 34rem;
+  font-size: clamp(0.9rem, 1.5vw, 1.05rem);
+  color: hsl(240 3% 52%);
+}
+
+.login-sign-in-blurb {
+  margin: 0.65rem auto 1.25rem;
+  max-width: 22rem;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: hsl(240 3% 46%);
+  letter-spacing: -0.01em;
 }
 
 /* Side-by-side Store CTAs — primary Action Blue + outline */
@@ -519,7 +541,7 @@ a.login-cta-secondary:active {
 }
 
 .login-apple-step {
-  animation: login-apple-step-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: none;
 }
 
 @keyframes login-apple-step-in {
@@ -600,12 +622,67 @@ a.login-cta-secondary:active {
 .login-sign-in-context strong{color:hsl(240 6% 10%);font-weight:600}
 .login-security-note{display:flex;align-items:center;justify-content:center;gap:.4rem;margin-top:1.25rem;font-size:.75rem;color:hsl(240 3% 46%)}
 .login-footer{margin:0;padding:1rem;text-align:center;font-size:.6875rem;letter-spacing:.04em;color:hsl(240 4% 62%)}
-.auth-backdrop{z-index:40;padding:0;background:hsl(0 0% 100%);opacity:0;pointer-events:none}
-.auth-backdrop.open{opacity:1;pointer-events:auto}
-.auth-backdrop:not(.open){display:none}
-.auth-backdrop.open{display:block}
+.auth-backdrop.login-page,
+.auth-backdrop.login-store-page {
+  /* Must stay fixed — .login-page { position:relative } was shoving the gate
+     below the still-laid-out (visibility:hidden) app shell ≈1150px down. */
+  position: fixed !important;
+  z-index: 40;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: hsl(0 0% 100%);
+  transition: none !important;
+  opacity: 1;
+  pointer-events: none;
+  inset: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  transform: none !important;
+}
+.auth-backdrop.login-page:not(.open),
+.auth-backdrop.login-store-page:not(.open) {
+  display: none !important;
+}
+.auth-backdrop.login-page.open,
+.auth-backdrop.login-store-page.open {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  place-items: unset !important;
+  place-content: unset !important;
+  opacity: 1 !important;
+  pointer-events: auto;
+  overflow: hidden !important;
+}
+.auth-backdrop.login-page.open > .login-localnav,
+.auth-backdrop.login-page.open > .login-store-scroll,
+.auth-backdrop.login-page.open > .login-footer {
+  align-self: stretch !important;
+  width: 100% !important;
+  margin: 0 !important;
+  flex-shrink: 0;
+}
+.auth-backdrop.login-page.open > .login-store-scroll {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  flex-shrink: 1 !important;
+}
+body.login-locked {
+  overflow: hidden !important;
+}
 body.login-locked .app-shell,
-body.login-locked .ambient{visibility:hidden}
+body.login-locked .ambient,
+body.login-locked .modal-backdrop,
+body.login-locked .detail-backdrop {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
 
 
 /* ── Zyvor brand accent (very light) ── */

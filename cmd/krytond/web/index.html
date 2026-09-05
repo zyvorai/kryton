@@ -15,8 +15,45 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/login.css">
+  <script>
+    /* First paint: show login immediately when no session token — avoids dashboard flash. */
+    (function () {
+      try {
+        if (sessionStorage.getItem('kryton.token')) document.documentElement.dataset.auth = '1';
+      } catch (_) {}
+    })();
+  </script>
+  <style>
+    html:not([data-auth="1"]) body { overflow: hidden !important; }
+    html:not([data-auth="1"]) .app-shell,
+    html:not([data-auth="1"]) .ambient,
+    html:not([data-auth="1"]) .modal-backdrop,
+    html:not([data-auth="1"]) .detail-backdrop {
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+    html:not([data-auth="1"]) #authBackdrop {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+      justify-content: flex-start !important;
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 40 !important;
+      width: 100% !important;
+      height: 100dvh !important;
+      max-height: 100dvh !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      background: #fff !important;
+      overflow: hidden !important;
+      transform: none !important;
+    }
+  </style>
 </head>
-<body>
+<body class="login-locked">
 <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="icon-sprite">
   <symbol id="icon-overview" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="6" height="6" rx="1.5"/><rect x="11.5" y="2.5" width="6" height="6" rx="1.5"/><rect x="2.5" y="11.5" width="6" height="6" rx="1.5"/><rect x="11.5" y="11.5" width="6" height="6" rx="1.5"/></symbol>
   <symbol id="icon-machines" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="10" rx="2"/><path d="M7 17h6"/><path d="M10 14v3"/></symbol>
@@ -184,7 +221,7 @@
 </div>
 
 <div id="detailBackdrop" class="detail-backdrop" aria-hidden="true"><aside id="detailPanel" class="detail-panel"><button class="close-button" id="closeDetail" aria-label="Close"><svg class="ui-icon" viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><use href="#icon-close"/></svg></button><div id="detailContent"></div></aside></div>
-<div id="authBackdrop" class="auth-backdrop login-page login-store-page" data-testid="login-page" aria-hidden="true">
+<div id="authBackdrop" class="auth-backdrop login-page login-store-page open" data-testid="login-page" aria-hidden="false">
   <nav class="login-localnav" aria-label="Login chapters">
     <a href="#login-product" data-login-chapter="login-product">Product</a>
     <a href="#login-machine" data-login-chapter="login-machine">This machine</a>
@@ -199,8 +236,9 @@
         </a>
         <p class="login-wordmark">Kryton</p>
         <p class="login-byline">by Zyvor</p>
-        <h1 class="login-hero-title">Windows control plane.</h1>
-        <p class="login-tagline">One API for Windows VMs across demo, dockur, and KubeVirt. Confirm this machine, then connect.</p>
+        <h1 class="login-hero-title">Windows,<br>under one API.</h1>
+        <p class="login-tagline">Kryton is Zyvor’s Windows virtualization control plane — one REST API for demo, dockur/windows, or KubeVirt. Provision, snapshot, and operate from this console.</p>
+        <p class="login-tagline login-tagline-soft">Confirm this machine, then connect with an API key.</p>
         <div class="login-pill-row">
           <span class="login-pill" data-tone="sky"><span class="login-pill-dot" aria-hidden="true"></span>demo</span>
           <span class="login-pill" data-tone="violet"><span class="login-pill-dot" aria-hidden="true"></span>dockur</span>
@@ -218,10 +256,11 @@
       <div class="login-chapter-inner">
         <p class="login-chapter-kicker">This machine</p>
         <h2 class="login-dest-title" id="loginDestHost">localhost.</h2>
-        <p class="login-tagline">You are connecting to <strong style="color:#fff;font-weight:600">Kryton</strong> on this host — not a public cloud console.</p>
+        <p class="login-tagline">You are connecting to <strong style="color:#fff;font-weight:600">Kryton</strong> on this host — Zyvor’s Windows control plane for this lab or cluster, not a public cloud console.</p>
         <ul class="login-dest-facts">
           <li class="login-dest-fact"><span class="login-dest-fact-label">Product</span><span class="login-dest-fact-value is-display">Kryton</span></li>
           <li class="login-dest-fact"><span class="login-dest-fact-label">Host</span><span class="login-dest-fact-value" id="loginFactHost">—</span></li>
+          <li class="login-dest-fact"><span class="login-dest-fact-label">Port</span><span class="login-dest-fact-value" id="loginFactPort">—</span></li>
           <li class="login-dest-fact"><span class="login-dest-fact-label">Origin</span><span class="login-dest-fact-value" id="loginFactOrigin">—</span></li>
           <li class="login-dest-fact"><span class="login-dest-fact-label">Auth mode</span><span class="login-dest-fact-value" id="loginFactAuth">—</span></li>
           <li class="login-dest-fact"><span class="login-dest-fact-label">Provider</span><span class="login-dest-fact-value" id="loginFactProvider">—</span></li>
@@ -238,6 +277,7 @@
         <img class="login-mark-sm" src="/zyvor-mark.svg" alt="" width="36" height="36">
         <p class="login-sign-in-context">Signing in to <strong>Kryton</strong> on <span class="login-apple-host" id="loginSignHost">localhost</span></p>
         <p class="login-form-heading">Connect with an API key</p>
+        <p class="login-sign-in-blurb">Kryton runs the Windows estate on this host — create machines, watch jobs, and drive the same API your automation already uses.</p>
         <div class="login-card" id="loginCard">
           <form id="authForm" class="login-apple-step" autocomplete="off">
             <label for="authToken" class="login-dest-fact-label" style="color:hsl(240 3% 46%);margin-bottom:.5rem;display:block">Bearer token</label>
@@ -246,7 +286,7 @@
           </form>
           <p class="login-security-note">Token stays in session storage for this browser tab only.</p>
         </div>
-        <p class="login-hint">Lab installs can auto-connect when <span class="login-apple-host">KRYTON_LAB_AUTO_AUTH</span> is enabled.</p>
+        <p class="login-hint">Need a key? On the Kryton host run <span class="login-apple-host">./scripts/ensure-api-keys.sh</span> and open <span class="login-apple-host">~/.kryton/lab.token</span> (or <span class="login-apple-host">/etc/kryton/lab.token</span>).</p>
       </div>
     </section>
   </main>

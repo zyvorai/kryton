@@ -19,13 +19,23 @@ make deploy-remote H=<host> U=<user> ARGS='--key'
 ./scripts/deploy-remote.sh <user>@<host> --quick --key
 ```
 
-After a successful deploy the demo control plane listens on port **8080** (override with `KRYTON_PORT`):
+After a successful deploy the control plane listens on a **configurable** port:
 
-```text
-http://<host>:8080/
+- `--port <N>` or `KRYTON_PORT=<N>` — set explicitly
+- Otherwise the existing remote unit’s `KRYTON_ADDR` is preserved
+- Fresh installs default to **8080**
+
+```bash
+./scripts/deploy-remote.sh <user>@<host> --key --port 18080
+# later quick redeploys keep :18080 unless you pass --port again
+./scripts/deploy-remote.sh <user>@<host> --quick --key
 ```
 
-Default unit uses **`KRYTON_AUTH_MODE=disabled`**. For a shared host, turn on API keys before exposing the port:
+```text
+http://<host>:<port>/
+```
+
+Default **new** units use **`KRYTON_AUTH_MODE=disabled`**. Redeploys do **not** rewrite auth on an existing unit. For a shared host, turn on API keys before exposing the port:
 
 ```bash
 ssh <user>@<host>
@@ -36,17 +46,17 @@ cat ~/.kryton/lab.token    # paste into the UI Sign in chapter, or export KRYTON
 
 How to create, rotate, and use keys (browser + CLI + Helm): **[AUTH.md](AUTH.md)**.
 
-If the port is firewalled, tunnel:
+If the port is firewalled, tunnel (match your listen port):
 
 ```bash
-ssh -L 8080:127.0.0.1:8080 <user>@<host>
-open http://localhost:8080
+ssh -L 18080:127.0.0.1:18080 <user>@<host>
+open http://localhost:18080
 ```
 
 Verify:
 
 ```bash
-curl -s http://<host>:8080/readyz
+curl -s http://<host>:18080/readyz   # or your --port / preserved port
 ssh <user>@<host> krytonctl doctor
 ```
 

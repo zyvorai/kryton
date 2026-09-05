@@ -18,6 +18,13 @@ VERSION="1.0.0"
 REMOTE_DIR=""
 DEPLOY_PROFILE="full"
 DEPLOY_LOG="${KRYTON_DEPLOY_LOG:-${HOME}/.kryton/deploy-$(date +%Y%m%d-%H%M%S).log}"
+# Listen port: --port / KRYTON_PORT win; otherwise reuse the remote unit's
+# existing KRYTON_ADDR; otherwise default 8080. Redeploys must not silently
+# move an already-running lab off its configured port.
+PORT_EXPLICIT=false
+if [ -n "${KRYTON_PORT:-}" ]; then
+    PORT_EXPLICIT=true
+fi
 KRYTON_PORT="${KRYTON_PORT:-8080}"
 
 QUICK_MODE=false
@@ -58,21 +65,24 @@ Options:
   --no-service        Install binaries only (do not enable systemd unit)
   --key               SSH key auth (clear password)
   --uninstall         Stop service and remove install
-  --port <N>          Listen port for the demo unit (default: 8080, or \$KRYTON_PORT)
+  --port <N>          Listen port (sets KRYTON_ADDR=:<N>). Default: existing remote
+                      unit port if present, else 8080 / \$KRYTON_PORT
   -v, --verbose       Verbose rsync
 
 Environment:
   KRYTON_DEPLOY_LOG    Log file path
   KRYTON_SSH_RETRIES   SSH retry count (default: 3)
-  KRYTON_PORT          Listen port for demo unit (default: 8080; overridden by --port)
+  KRYTON_PORT          Listen port (same as --port; preserved across redeploys
+                       when neither --port nor KRYTON_PORT is set)
   DEPLOY_DIR           Override remote staging dir (default: ~/.deployments/kryton)
 
 Examples:
   $0 <user>@<host> --key
   $0 <user>@<host> --quick
   $0 <user>@<host> --build-local --quick
-  $0 <user>@<host> --port 8090
-  make deploy-remote H=<host> U=<user>
+  $0 <user>@<host> --port 18080
+  KRYTON_PORT=18080 $0 <user>@<host> --key
+  make deploy-remote H=<host> U=<user> ARGS='--port 18080'
 EOF
 }
 
@@ -91,7 +101,9 @@ while [ $# -gt 0 ]; do
         --no-service)     NO_SERVICE=true; shift ;;
         --port)
             [ -n "${2:-}" ] || { echo "--port requires a value" >&2; exit 1; }
-            KRYTON_PORT="$2"; shift 2 ;;
+            KRYTON_PORT="$2"
+            PORT_EXPLICIT=true
+            shift 2 ;;
         -v|--verbose)     VERBOSE=true; shift ;;
         *)
             POSITIONAL+=("$1")
@@ -179,6 +191,111 @@ _ssh() {
         fi
     done
     return 1
+}
+
+# Prefer an explicit --port / KRYTON_PORT; otherwise keep whatever the remote
+# unit already listens on so quick redeploys do not bounce labs off :18080 → :8080.
+resolve_listen_port() {
+    if [ "$PORT_EXPLICIT" = true ]; then
+        info "Listen port ${KRYTON_PORT} (explicit)"
+        return 0
+    fi
+    if [ "$DRY_RUN" = true ]; then
+        info "Listen port ${KRYTON_PORT} (default; dry-run skips remote probe)"
+        return 0
+    fi
+    local existing=""
+    existing="$(_ssh_once 'bash -s' <<'PROBE' 2>/dev/null || true
+unit=/etc/systemd/system/kryton.service
+envf=/etc/kryton/env
+for f in "$envf" "$unit"; do
+  [ -f "$f" ] || continue
+  line=$(grep -E '^[[:space:]]*(Environment=)?KRYTON_ADDR=' "$f" 2>/dev/null | tail -1 || true)
+  [ -n "$line" ] || continue
+  addr=${line#*KRYTON_ADDR=}
+  addr=${addr%%[[:space:]]*}
+  addr=${addr#\"}
+  addr=${addr%\"}
+  case "$addr" in
+    :[0-9]*|[0-9]*:[0-9]*)
+      port=${addr##*:}
+      case "$port" in
+        ''|*[!0-9]*|0) ;;
+        *) printf '%s\n' "$port"; exit 0 ;;
+      esac
+      ;;
+  esac
+done
+PROBE
+)" || true
+    existing="$(printf '%s' "$existing" | tr -d '[:space:]')"
+    case "${existing}" in
+        ''|*[!0-9]*|0) info "Listen port ${KRYTON_PORT} (default)" ;;
+        *)
+            KRYTON_PORT="$existing"
+            info "Listen port ${KRYTON_PORT} (preserving remote unit)"
+            ;;
+    esac
+}
+
+# Install or patch the systemd unit. New installs get a demo unit; existing
+# units only get KRYTON_ADDR updated so auth/keys/provider survive redeploys.
+remote_install_service() {
+    _ssh env KRYTON_PORT="${KRYTON_PORT}" bash <<'REMOTE'
+set -euo pipefail
+SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO="sudo"
+UNIT=/etc/systemd/system/kryton.service
+ADDR=":${KRYTON_PORT}"
+
+if [ -f "$UNIT" ]; then
+  if grep -qE '^Environment=KRYTON_ADDR=' "$UNIT"; then
+    $SUDO sed -i "s|^Environment=KRYTON_ADDR=.*|Environment=KRYTON_ADDR=${ADDR}|" "$UNIT"
+  else
+    $SUDO sed -i "/^\[Service\]/a Environment=KRYTON_ADDR=${ADDR}" "$UNIT"
+  fi
+  $SUDO mkdir -p /etc/kryton
+  if [ -f /etc/kryton/env ]; then
+    if grep -qE '^KRYTON_ADDR=' /etc/kryton/env; then
+      $SUDO sed -i "s|^KRYTON_ADDR=.*|KRYTON_ADDR=${ADDR}|" /etc/kryton/env
+    else
+      printf 'KRYTON_ADDR=%s\n' "$ADDR" | $SUDO tee -a /etc/kryton/env >/dev/null
+    fi
+  fi
+  $SUDO systemctl daemon-reload
+  $SUDO systemctl enable --now kryton.service
+  $SUDO systemctl restart kryton.service
+  echo "Updated existing unit listen address to ${ADDR}"
+  $SUDO systemctl --no-pager --full status kryton.service | head -20 || true
+  exit 0
+fi
+
+$SUDO mkdir -p /etc/kryton
+printf 'KRYTON_ADDR=%s\n' "$ADDR" | $SUDO tee /etc/kryton/env >/dev/null
+$SUDO tee "$UNIT" >/dev/null <<UNIT
+[Unit]
+Description=Kryton Windows virtualization control plane
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/kryton/env
+Environment=KRYTON_PROVIDER=demo
+Environment=KRYTON_AUTH_MODE=disabled
+Environment=KRYTON_ADDR=${ADDR}
+Environment=KRYTON_ALLOW_INSECURE=true
+ExecStart=/usr/local/bin/krytond
+Restart=on-failure
+RestartSec=3
+User=root
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+$SUDO systemctl daemon-reload
+$SUDO systemctl enable --now kryton.service
+$SUDO systemctl --no-pager --full status kryton.service | head -20 || true
+REMOTE
 }
 
 _rsync() {
@@ -343,7 +460,7 @@ build_install_remote() {
         step_end
         return 0
     fi
-    _ssh env REMOTE_STAGING="${REMOTE_DIR}" KRYTON_PORT="${KRYTON_PORT}" NO_SERVICE="$NO_SERVICE" bash <<'REMOTE'
+    _ssh env REMOTE_STAGING="${REMOTE_DIR}" NO_SERVICE="$NO_SERVICE" bash <<'REMOTE'
 set -euo pipefail
 SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO="sudo"
 export PATH=/usr/local/go/bin:${HOME}/go/bin:${PATH}
@@ -354,36 +471,13 @@ CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o bin/krytonctl ./cmd/krytonc
 $SUDO install -m755 bin/krytond /usr/local/bin/krytond
 $SUDO install -m755 bin/krytonctl /usr/local/bin/krytonctl
 echo "Installed: $(command -v krytond) $(command -v krytonctl)"
-
 if [ "${NO_SERVICE}" = "true" ]; then
   echo "Skipping systemd unit (--no-service)"
-  exit 0
 fi
-
-$SUDO tee /etc/systemd/system/kryton.service >/dev/null <<UNIT
-[Unit]
-Description=Kryton Windows virtualization control plane
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-Environment=KRYTON_PROVIDER=demo
-Environment=KRYTON_AUTH_MODE=disabled
-Environment=KRYTON_ADDR=:${KRYTON_PORT}
-Environment=KRYTON_ALLOW_INSECURE=true
-ExecStart=/usr/local/bin/krytond
-Restart=on-failure
-RestartSec=3
-User=root
-
-[Install]
-WantedBy=multi-user.target
-UNIT
-$SUDO systemctl daemon-reload
-$SUDO systemctl enable --now kryton.service
-$SUDO systemctl --no-pager --full status kryton.service | head -20 || true
 REMOTE
+    if [ "$NO_SERVICE" != true ]; then
+        remote_install_service
+    fi
     ok "Binaries installed"
     step_end
 }
@@ -395,39 +489,19 @@ install_binaries_quick() {
         step_end
         return 0
     fi
-    _ssh env REMOTE_STAGING="${REMOTE_DIR}" KRYTON_PORT="${KRYTON_PORT}" NO_SERVICE="$NO_SERVICE" bash <<'REMOTE'
+    _ssh env REMOTE_STAGING="${REMOTE_DIR}" NO_SERVICE="$NO_SERVICE" bash <<'REMOTE'
 set -euo pipefail
 SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO="sudo"
 $SUDO install -m755 "${REMOTE_STAGING}/bin/krytond" /usr/local/bin/krytond
 $SUDO install -m755 "${REMOTE_STAGING}/bin/krytonctl" /usr/local/bin/krytonctl
 if [ "${NO_SERVICE}" = "true" ]; then
   echo "Skipping systemd unit (--no-service)"
-  exit 0
 fi
-$SUDO tee /etc/systemd/system/kryton.service >/dev/null <<UNIT
-[Unit]
-Description=Kryton Windows virtualization control plane
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-Environment=KRYTON_PROVIDER=demo
-Environment=KRYTON_AUTH_MODE=disabled
-Environment=KRYTON_ADDR=:${KRYTON_PORT}
-Environment=KRYTON_ALLOW_INSECURE=true
-ExecStart=/usr/local/bin/krytond
-Restart=on-failure
-RestartSec=3
-User=root
-
-[Install]
-WantedBy=multi-user.target
-UNIT
-$SUDO systemctl daemon-reload
-$SUDO systemctl enable --now kryton.service
-echo "Installed binaries + service"
+echo "Installed binaries"
 REMOTE
+    if [ "$NO_SERVICE" != true ]; then
+        remote_install_service
+    fi
     ok "Quick install done"
     step_end
 }
@@ -496,12 +570,14 @@ main() {
         exit 0
     fi
     if [ "$VERIFY_ONLY" = true ]; then
+        resolve_listen_port
         verify_remote
         exit 0
     fi
 
     run_step_preflight() { step_begin "Preflight"; preflight_remote; step_end; }
     run_step_preflight
+    resolve_listen_port
 
     if [ "$BUILD_LOCAL" = true ]; then
         build_local_artifacts

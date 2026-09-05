@@ -73,7 +73,9 @@ ingress:
 
 service:
   type: ClusterIP
+  # Service port (ClusterIP / Ingress backend).
   port: 80
+  # Container listen port — also sets KRYTON_ADDR=:<targetPort>.
   targetPort: 8080
   nodePort: 0
 
