@@ -14,6 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/login.css">
 </head>
 <body>
 <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="icon-sprite">
@@ -182,7 +183,70 @@
 </div>
 
 <div id="detailBackdrop" class="detail-backdrop" aria-hidden="true"><aside id="detailPanel" class="detail-panel"><button class="close-button" id="closeDetail" aria-label="Close"><svg class="ui-icon" viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><use href="#icon-close"/></svg></button><div id="detailContent"></div></aside></div>
-<div id="authBackdrop" class="auth-backdrop" aria-hidden="true"><div class="auth-card"><img class="brand-logo auth-mark" src="/zyvor-mark.svg" alt="Zyvor" width="28" height="28"><p class="eyebrow">KRYTON ACCESS</p><h2>Connect to the control plane.</h2><p>Enter a bearer token. It is kept only in session storage for this browser tab.</p><form id="authForm"><input id="authToken" type="password" placeholder="Bearer token" autocomplete="off" required><button class="primary full" type="submit">Connect</button></form></div></div>
+<div id="authBackdrop" class="auth-backdrop login-page login-store-page" data-testid="login-page" aria-hidden="true">
+  <nav class="login-localnav" aria-label="Login chapters">
+    <a href="#login-product" data-login-chapter="login-product">Product</a>
+    <a href="#login-machine" data-login-chapter="login-machine">This machine</a>
+    <a href="#login-sign-in" data-login-chapter="login-sign-in">Sign in</a>
+    <span class="login-localnav-host" id="loginNavHost"></span>
+  </nav>
+  <main class="login-store-scroll" aria-label="Sign in to Kryton">
+    <section id="login-product" class="login-chapter login-chapter-hero" data-tone="sky" aria-label="Kryton">
+      <div class="login-chapter-inner">
+        <img class="login-mark brand-logo" src="/zyvor-mark.svg" alt="" width="56" height="56">
+        <p class="login-wordmark">Kryton</p>
+        <h1 class="login-hero-title">Windows control plane.</h1>
+        <p class="login-tagline">One API for Windows VMs across demo, dockur, and KubeVirt. Confirm this machine, then connect.</p>
+        <div class="login-pill-row">
+          <span class="login-pill" data-tone="sky"><span class="login-pill-dot" aria-hidden="true"></span>demo</span>
+          <span class="login-pill" data-tone="violet"><span class="login-pill-dot" aria-hidden="true"></span>dockur</span>
+          <span class="login-pill" data-tone="emerald"><span class="login-pill-dot" aria-hidden="true"></span>kubevirt</span>
+        </div>
+        <div class="login-cta">
+          <button type="button" class="login-cta-primary" data-login-chapter="login-machine">This machine</button>
+          <button type="button" class="login-cta-secondary" data-login-chapter="login-sign-in">Sign in</button>
+        </div>
+        <p class="login-chapter-note">Bearer API key · session storage only for this tab</p>
+      </div>
+    </section>
+
+    <section id="login-machine" class="login-chapter login-chapter-destination" aria-label="This machine">
+      <div class="login-chapter-inner">
+        <p class="login-chapter-kicker">This machine</p>
+        <h2 class="login-dest-title" id="loginDestHost">localhost.</h2>
+        <p class="login-tagline">You are connecting to <strong style="color:#fff;font-weight:600">Kryton</strong> on this host — not a public cloud console.</p>
+        <ul class="login-dest-facts">
+          <li class="login-dest-fact"><span class="login-dest-fact-label">Product</span><span class="login-dest-fact-value is-display">Kryton</span></li>
+          <li class="login-dest-fact"><span class="login-dest-fact-label">Host</span><span class="login-dest-fact-value" id="loginFactHost">—</span></li>
+          <li class="login-dest-fact"><span class="login-dest-fact-label">Origin</span><span class="login-dest-fact-value" id="loginFactOrigin">—</span></li>
+          <li class="login-dest-fact"><span class="login-dest-fact-label">Auth mode</span><span class="login-dest-fact-value" id="loginFactAuth">—</span></li>
+          <li class="login-dest-fact"><span class="login-dest-fact-label">Provider</span><span class="login-dest-fact-value" id="loginFactProvider">—</span></li>
+          <li class="login-dest-fact"><span class="login-dest-fact-label">kubectl / API</span><span class="login-dest-fact-value" id="loginFactReady">—</span></li>
+        </ul>
+        <div class="login-cta">
+          <button type="button" class="login-cta-primary" data-login-chapter="login-sign-in">Continue to sign in</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="login-sign-in" class="login-chapter login-chapter-sign-in" aria-label="Credentials">
+      <div class="login-chapter-inner login-sign-in-inner">
+        <p class="login-sign-in-context">Signing in to <strong>Kryton</strong> on <span class="login-apple-host" id="loginSignHost">localhost</span></p>
+        <p class="login-form-heading">Connect with an API key</p>
+        <div class="login-card" id="loginCard">
+          <form id="authForm" class="login-apple-step" autocomplete="off">
+            <label for="authToken" class="login-dest-fact-label" style="color:hsl(240 3% 46%);margin-bottom:.5rem;display:block">Bearer token</label>
+            <input id="authToken" class="login-input" type="password" placeholder="kryton_…" autocomplete="off" required style="padding-left:1rem">
+            <button class="login-btn-primary" type="submit">Sign in to Kryton</button>
+          </form>
+          <p class="login-security-note">Token stays in session storage for this browser tab only.</p>
+        </div>
+        <p class="login-hint">Lab installs can auto-connect when <span class="login-apple-host">KRYTON_LAB_AUTO_AUTH</span> is enabled.</p>
+      </div>
+    </section>
+  </main>
+  <p class="login-footer">Kryton by Zyvor · zyvor.dev</p>
+</div>
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="/app.js" defer></script>
 </body>

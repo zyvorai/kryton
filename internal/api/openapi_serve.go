@@ -56,23 +56,31 @@ func (s *Server) serveOpenAPI(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) apiDiscovery(w http.ResponseWriter, r *http.Request) {
-	jsonResponse(w, http.StatusOK, apiCatalog{
-		Name:        "kryton",
-		Version:     "1.0.0",
-		Description: "Kryton Windows virtualization control plane",
-		OpenAPI:     "/openapi.yaml",
-		BasePath:    "/api/v1",
-		Auth: apiCatalogAuth{
+	provider := ""
+	if s.p != nil {
+		provider = s.p.Name()
+	}
+	jsonResponse(w, http.StatusOK, map[string]any{
+		"name":        "kryton",
+		"version":     "1.0.0",
+		"description": "Kryton Windows virtualization control plane",
+		"openapi":     "/openapi.yaml",
+		"basePath":    "/api/v1",
+		// Public cluster / login identity — safe before auth so the Apple
+		// Store login chapters can confirm which control plane you hit.
+		"provider": provider,
+		"product":  "Kryton",
+		"auth": apiCatalogAuth{
 			Mode:    s.authMode,
 			Schemes: []string{"bearer", "proxy"},
 			Header:  "Authorization",
 		},
-		Health: map[string]string{
+		"health": map[string]string{
 			"live":    "/healthz",
 			"ready":   "/readyz",
 			"metrics": "/metrics",
 		},
-		Endpoints: allAPIEndpoints(),
+		"endpoints": allAPIEndpoints(),
 	})
 }
 

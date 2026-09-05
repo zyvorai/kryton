@@ -32,6 +32,9 @@ func TestAPIDiscoveryAndOpenAPI(t *testing.T) {
 	if !strings.Contains(body, `"openapi":"/openapi.yaml"`) || !strings.Contains(body, `/api/v1/machines`) {
 		t.Fatalf("unexpected discovery: %s", body)
 	}
+	if !strings.Contains(body, `"provider"`) || !strings.Contains(body, `"product":"Kryton"`) {
+		t.Fatalf("discovery missing login context: %s", body)
+	}
 
 	w = httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/openapi.yaml", nil))
