@@ -30,6 +30,10 @@
 .create-hero-stack{display:flex;flex-direction:column;align-items:center;gap:8px;flex:none;padding-bottom:4px}.create-hero-fab{width:min(210px,24vw);min-width:140px;height:68px;border:0;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer;display:grid;place-items:center;box-shadow:0 12px 32px var(--accent-glow);transition:transform .18s ease,background .18s ease}.create-hero-fab:hover{transform:translateY(-1px);background:var(--accent2)}.create-hero-caption{font-size:12px;color:var(--soft);letter-spacing:-.01em;font-weight:500}
 .workspace{width:min(1400px,100%);margin:0 auto;padding:0 4vw 32px}
 .topbar{position:sticky;top:0;z-index:5;height:60px;display:flex;justify-content:flex-end;align-items:center;background:color-mix(in srgb,var(--bg) 82%,transparent);border-bottom:1px solid color-mix(in srgb,var(--line) 65%,transparent);margin:0 -4vw;padding:0 4vw}.mobile-brand{display:none;align-items:center;gap:9px;margin-right:auto}.top-actions{display:flex;align-items:center;gap:10px}
+.topbar-signout{height:28px;padding:0 12px;font-size:12px;font-weight:550;border-radius:980px;white-space:nowrap}
+.topbar-signout[hidden]{display:none!important}
+.settings-api-actions{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 6px}
+
 .project-picker{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);padding:6px 10px;border-radius:8px;font-size:11px;color:var(--soft)}.project-picker select{border:0;background:transparent;color:var(--text);font-weight:600;outline:0;max-width:140px}
 .icon-button,.avatar{border:1px solid var(--line);background:var(--surface);width:28px;height:28px;border-radius:50%;cursor:pointer;display:grid;place-items:center;color:var(--soft);transition:.18s ease}.icon-button:hover{color:var(--text);background:var(--surface-hover)}.avatar{background:linear-gradient(145deg,#ff5a15,#cc420a);color:white;font-size:10px;font-weight:700}
 .view{display:none;animation:viewIn .28s ease}.view.active{display:block}@keyframes viewIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}

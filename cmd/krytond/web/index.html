@@ -66,7 +66,8 @@
       <div class="top-actions">
         <label class="project-picker"><span>Project</span><select id="projectSelect" aria-label="Project"></select></label>
         <button class="icon-button" id="themeButton" aria-label="Toggle appearance"><svg class="ui-icon" viewBox="0 0 20 20" width="14" height="14" id="themeIcon" aria-hidden="true"><use href="#icon-moon"/></svg></button>
-        <button class="avatar" id="profileButton" aria-label="Profile">K</button>
+        <button class="secondary topbar-signout" id="logoutButton" type="button" title="Sign out and clear this tab’s API token">Sign out</button>
+        <button class="avatar" id="profileButton" aria-label="Profile and settings" title="Settings">K</button>
       </div>
     </div>
 
@@ -117,7 +118,7 @@
 
     <section id="view-settings" class="view">
       <header class="section-page-header"><div><p class="eyebrow">CONTROL PLANE</p><h2>Settings</h2><p>Connection identity, provider capabilities, and cluster disk storage for this Kryton instance.</p></div></header>
-      <div class="settings-grid"><article class="surface settings-card"><span class="settings-icon"><svg class="ui-icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><use href="#icon-identity"/></svg></span><h3>Identity</h3><dl id="identityDetails"></dl></article><article class="surface settings-card"><span class="settings-icon"><svg class="ui-icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><use href="#icon-provider"/></svg></span><h3>Provider</h3><dl id="providerDetails"></dl></article><article class="surface settings-card"><span class="settings-icon"><svg class="ui-icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><use href="#icon-api"/></svg></span><h3>API access</h3><p>Use a project-scoped bearer token for service-to-service access.</p><button class="secondary" id="tokenButton">Set session token</button><small>Stored only for this browser session.</small></article></div>
+      <div class="settings-grid"><article class="surface settings-card"><span class="settings-icon"><svg class="ui-icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><use href="#icon-identity"/></svg></span><h3>Identity</h3><dl id="identityDetails"></dl></article><article class="surface settings-card"><span class="settings-icon"><svg class="ui-icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><use href="#icon-provider"/></svg></span><h3>Provider</h3><dl id="providerDetails"></dl></article><article class="surface settings-card"><span class="settings-icon"><svg class="ui-icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><use href="#icon-api"/></svg></span><h3>API access</h3><p>Use a project-scoped bearer token for service-to-service access.</p><div class="settings-api-actions"><button class="secondary" id="tokenButton" type="button">Set session token</button><button class="secondary" id="settingsLogoutButton" type="button">Sign out</button></div><small>Token is stored only for this browser tab. Sign out clears it.</small></article></div>
       <article class="surface settings-storage" id="settingsConnectionCard">
         <p class="eyebrow">CONNECTION</p>
         <h3>Control plane health</h3>

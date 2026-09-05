@@ -60,6 +60,7 @@ That enables **apikey** auth and usually **`KRYTON_LAB_AUTO_AUTH=true`**, so the
 2. If auto-auth is **off**, the login chapters appear → **Sign in** → paste the bearer token → **Sign in to Kryton**.
 3. If auto-auth is **on**, the UI loads the token from `GET /api/v1/lab/bootstrap` (lab-only; requires `KRYTON_ALLOW_INSECURE=true`).
 4. Settings → **Set session token** reopens the login gate to replace the token for this tab.
+5. **Sign out** (top bar, or Settings → API access) clears this tab’s token and returns to the login chapters. With lab auto-auth, Sign out also skips auto-connect until you paste a key again (or clear `sessionStorage`).
 
 Token storage: **sessionStorage for this browser tab only**.
 
