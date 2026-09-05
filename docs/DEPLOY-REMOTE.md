@@ -35,7 +35,15 @@ After a successful deploy the control plane listens on a **configurable** port:
 http://<host>:<port>/
 ```
 
-Default **new** units use **`KRYTON_AUTH_MODE=disabled`**. Redeploys do **not** rewrite auth on an existing unit. For a shared host, turn on API keys before exposing the port:
+Default **new** units use **`KRYTON_AUTH_MODE=disabled`**. Redeploys do **not** rewrite auth on an existing unit. For a shared host, turn on API keys in one shot:
+
+```bash
+./scripts/deploy-remote.sh <user>@<host> --key --port 18080 --apikey
+# token on host:
+ssh <user>@<host> 'sudo cat /etc/kryton/lab.token'
+```
+
+Or manually:
 
 ```bash
 ssh <user>@<host>
@@ -45,6 +53,8 @@ cat ~/.kryton/lab.token    # paste into the UI Sign in chapter, or export KRYTON
 ```
 
 How to create, rotate, and use keys (browser + CLI + Helm): **[AUTH.md](AUTH.md)**.
+
+**Provider note:** `deploy-remote` installs the **demo** provider (UI + API without Docker). For real Windows guests on this host use `./scripts/harden-lab-services.sh` (dockur / kubevirt) when the container runtime is healthy. Login stays **API-key only** (no SSO) by design.
 
 If the port is firewalled, tunnel (match your listen port):
 

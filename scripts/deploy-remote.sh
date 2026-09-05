@@ -38,6 +38,7 @@ VERIFY_ONLY=false
 PREFLIGHT_ONLY=false
 NO_SERVICE=false
 VERBOSE=false
+ENABLE_APIKEY=false
 SSH_RETRIES="${KRYTON_SSH_RETRIES:-3}"
 POSITIONAL=()
 
@@ -67,6 +68,9 @@ Options:
   --uninstall         Stop service and remove install
   --port <N>          Listen port (sets KRYTON_ADDR=:<N>). Default: existing remote
                       unit port if present, else 8080 / \$KRYTON_PORT
+  --apikey            Enable API-key auth on the unit (writes/ensures /etc/kryton/keys.json
+                      + lab.token; preserves existing keys). Default new units stay
+                      auth-disabled until this flag (or a prior hardened unit).
   -v, --verbose       Verbose rsync
 
 Environment:
@@ -80,9 +84,9 @@ Examples:
   $0 <user>@<host> --key
   $0 <user>@<host> --quick
   $0 <user>@<host> --build-local --quick
-  $0 <user>@<host> --port 18080
+  $0 <user>@<host> --port 18080 --apikey --key
   KRYTON_PORT=18080 $0 <user>@<host> --key
-  make deploy-remote H=<host> U=<user> ARGS='--port 18080'
+  make deploy-remote H=<host> U=<user> ARGS='--port 18080 --apikey'
 EOF
 }
 
@@ -104,6 +108,7 @@ while [ $# -gt 0 ]; do
             KRYTON_PORT="$2"
             PORT_EXPLICIT=true
             shift 2 ;;
+        --apikey)         ENABLE_APIKEY=true; shift ;;
         -v|--verbose)     VERBOSE=true; shift ;;
         *)
             POSITIONAL+=("$1")
@@ -240,12 +245,68 @@ PROBE
 
 # Install or patch the systemd unit. New installs get a demo unit; existing
 # units only get KRYTON_ADDR updated so auth/keys/provider survive redeploys.
+# With ENABLE_APIKEY=true, ensure keys and force apikey auth on the unit.
 remote_install_service() {
-    _ssh env KRYTON_PORT="${KRYTON_PORT}" bash <<'REMOTE'
+    _ssh env KRYTON_PORT="${KRYTON_PORT}" ENABLE_APIKEY="${ENABLE_APIKEY}" REMOTE_STAGING="${REMOTE_DIR}" bash <<'REMOTE'
 set -euo pipefail
 SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO="sudo"
 UNIT=/etc/systemd/system/kryton.service
 ADDR=":${KRYTON_PORT}"
+KEYS_DIR=/etc/kryton
+KEYS_FILE="${KEYS_DIR}/keys.json"
+TOKEN_FILE="${KEYS_DIR}/lab.token"
+
+ensure_apikeys() {
+  $SUDO mkdir -p "${KEYS_DIR}"
+  if [ -x "${REMOTE_STAGING}/scripts/ensure-api-keys.sh" ]; then
+    # Script defaults to ~/.kryton; point it at /etc/kryton for the unit.
+    KRYTON_KEYS_DIR="${KEYS_DIR}" KRYTON_API_KEYS_FILE="${KEYS_FILE}" \
+      "${REMOTE_STAGING}/scripts/ensure-api-keys.sh" || true
+  fi
+  if [ ! -f "${KEYS_FILE}" ] || [ ! -s "${TOKEN_FILE}" ]; then
+    # Fallback: mint admin key with krytonctl when ensure script did not write /etc paths.
+    TOKEN="$(krytonctl generate-token 2>/dev/null || openssl rand -base64 32 | tr -d '/+=' | head -c 43)"
+    HASH="$(krytonctl hash-token "${TOKEN}" 2>/dev/null || printf '%s' "${TOKEN}" | sha256sum | awk '{print $1}')"
+    printf '%s\n' "${TOKEN}" | $SUDO tee "${TOKEN_FILE}" >/dev/null
+    $SUDO tee "${KEYS_FILE}" >/dev/null <<EOF
+{
+  "keys": [
+    {
+      "name": "lab-admin",
+      "sha256": "${HASH}",
+      "role": "admin",
+      "projects": ["*"]
+    }
+  ]
+}
+EOF
+  fi
+  $SUDO chmod 600 "${KEYS_FILE}" "${TOKEN_FILE}" 2>/dev/null || true
+  echo "API keys ready: ${KEYS_FILE} (token: ${TOKEN_FILE})"
+}
+
+patch_unit_apikey() {
+  local unit="$1"
+  if grep -qE '^Environment=KRYTON_AUTH_MODE=' "$unit"; then
+    $SUDO sed -i 's|^Environment=KRYTON_AUTH_MODE=.*|Environment=KRYTON_AUTH_MODE=apikey|' "$unit"
+  else
+    $SUDO sed -i '/^\[Service\]/a Environment=KRYTON_AUTH_MODE=apikey' "$unit"
+  fi
+  if grep -qE '^Environment=KRYTON_API_KEYS_FILE=' "$unit"; then
+    $SUDO sed -i "s|^Environment=KRYTON_API_KEYS_FILE=.*|Environment=KRYTON_API_KEYS_FILE=${KEYS_FILE}|" "$unit"
+  else
+    $SUDO sed -i "/^\[Service\]/a Environment=KRYTON_API_KEYS_FILE=${KEYS_FILE}" "$unit"
+  fi
+  if grep -qE '^Environment=KRYTON_LAB_AUTO_AUTH=' "$unit"; then
+    $SUDO sed -i 's|^Environment=KRYTON_LAB_AUTO_AUTH=.*|Environment=KRYTON_LAB_AUTO_AUTH=false|' "$unit"
+  else
+    $SUDO sed -i '/^\[Service\]/a Environment=KRYTON_LAB_AUTO_AUTH=false' "$unit"
+  fi
+}
+
+if [ "${ENABLE_APIKEY}" = "true" ]; then
+  ensure_apikeys
+fi
 
 if [ -f "$UNIT" ]; then
   if grep -qE '^Environment=KRYTON_ADDR=' "$UNIT"; then
@@ -261,6 +322,9 @@ if [ -f "$UNIT" ]; then
       printf 'KRYTON_ADDR=%s\n' "$ADDR" | $SUDO tee -a /etc/kryton/env >/dev/null
     fi
   fi
+  if [ "${ENABLE_APIKEY}" = "true" ]; then
+    patch_unit_apikey "$UNIT"
+  fi
   $SUDO systemctl daemon-reload
   $SUDO systemctl enable --now kryton.service
   $SUDO systemctl restart kryton.service
@@ -271,6 +335,14 @@ fi
 
 $SUDO mkdir -p /etc/kryton
 printf 'KRYTON_ADDR=%s\n' "$ADDR" | $SUDO tee /etc/kryton/env >/dev/null
+AUTH_MODE=disabled
+API_KEYS_LINE=""
+LAB_AUTO_LINE=""
+if [ "${ENABLE_APIKEY}" = "true" ]; then
+  AUTH_MODE=apikey
+  API_KEYS_LINE="Environment=KRYTON_API_KEYS_FILE=${KEYS_FILE}"
+  LAB_AUTO_LINE="Environment=KRYTON_LAB_AUTO_AUTH=false"
+fi
 $SUDO tee "$UNIT" >/dev/null <<UNIT
 [Unit]
 Description=Kryton Windows virtualization control plane
@@ -281,7 +353,9 @@ Wants=network-online.target
 Type=simple
 EnvironmentFile=-/etc/kryton/env
 Environment=KRYTON_PROVIDER=demo
-Environment=KRYTON_AUTH_MODE=disabled
+Environment=KRYTON_AUTH_MODE=${AUTH_MODE}
+${API_KEYS_LINE}
+${LAB_AUTO_LINE}
 Environment=KRYTON_ADDR=${ADDR}
 Environment=KRYTON_ALLOW_INSECURE=true
 ExecStart=/usr/local/bin/krytond
@@ -292,6 +366,8 @@ User=root
 [Install]
 WantedBy=multi-user.target
 UNIT
+# Drop empty Environment lines if apikey off
+$SUDO sed -i '/^Environment=$/d' "$UNIT"
 $SUDO systemctl daemon-reload
 $SUDO systemctl enable --now kryton.service
 $SUDO systemctl --no-pager --full status kryton.service | head -20 || true
