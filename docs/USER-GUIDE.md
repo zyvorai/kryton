@@ -86,7 +86,20 @@ This installs:
 
 ### Authenticate
 
-**Browser:** Open `http://<host>:7088/` — with auto-auth, no token paste needed.
+Full key lifecycle: **[AUTH.md](AUTH.md)**.
+
+**Create / show the key** (on the lab host):
+
+```bash
+./scripts/ensure-api-keys.sh
+cat ~/.kryton/lab.token
+# laptop: ssh <user>@<host> 'cat ~/.kryton/lab.token'
+```
+
+**Browser:** Open `http://<host>:7088/`.
+
+- With **lab auto-auth** (`harden-lab-services.sh`): UI connects without pasting.
+- Without auto-auth: login chapters → **Sign in** → paste the bearer from `lab.token`.
 
 **CLI / scripts:**
 
@@ -249,11 +262,15 @@ curl -s "$KRYTON_URL/openapi.yaml" -o openapi.yaml
 | `apikey` | Lab + production | `Authorization: Bearer <token>` |
 | `proxy` | SSO behind nginx/Envoy | `X-Kryton-User`, `X-Kryton-Role`, `X-Kryton-Projects` |
 
-Generate keys:
+**Get a key** — see **[AUTH.md](AUTH.md)**. Short version:
 
 ```bash
+./scripts/ensure-api-keys.sh          # lab: writes ~/.kryton/lab.token + keys.json
+export KRYTON_TOKEN=$(cat ~/.kryton/lab.token)
+
+# Or manually / for Helm:
 TOKEN=$(krytonctl generate-token)
-krytonctl hash-token "$TOKEN"   # store hash in keys.json
+krytonctl hash-token "$TOKEN"         # store hash in keys.json; keep TOKEN secret
 ```
 
 Roles: `viewer` · `operator` · `admin` (scoped to projects).

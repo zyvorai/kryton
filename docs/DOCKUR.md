@@ -24,14 +24,17 @@ Run `krytonctl doctor` to validate all of the above before creating machines.
 
 ```bash
 ./scripts/ensure-api-keys.sh
+cat ~/.kryton/lab.token          # show the bearer key
 ./scripts/harden-lab-services.sh
 ```
 
 With `KRYTON_LAB_AUTO_AUTH=true` (set by `harden-lab-services.sh`), the UI **auto-connects** — no manual token paste. The bearer is read from `lab.token` via `GET /api/v1/lab/bootstrap` (lab-only; requires `KRYTON_ALLOW_INSECURE=true`).
 
+Without auto-auth, open the UI login chapters and paste the token from `lab.token`.
+
 For CLI/scripts: `export KRYTON_TOKEN=$(cat ~/.kryton/lab.token)`
 
-See [CUSTOMER.md](CUSTOMER.md).
+Full guide (create, rotate, Helm, troubleshooting): [AUTH.md](AUTH.md) · [CUSTOMER.md](CUSTOMER.md).
 
 ---
 

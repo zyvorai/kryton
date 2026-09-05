@@ -37,8 +37,11 @@ Real Windows via [dockur/windows](https://github.com/dockur/windows) — **not G
 ```bash
 # On the Linux host after krytond is installed:
 ./scripts/ensure-api-keys.sh
+cat ~/.kryton/lab.token            # raw API key for UI / KRYTON_TOKEN
 ./scripts/harden-lab-services.sh   # systemd + apikey on :7088 and :9088
 ```
+
+How to get, paste, and rotate the key: **[AUTH.md](AUTH.md)**.
 
 See [DOCKUR.md](DOCKUR.md) for create options (UI, API, `krytonctl --dockur-*`).
 

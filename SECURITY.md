@@ -16,4 +16,4 @@ Kryton does not yet maintain long-term-support branches. Security fixes land on 
 
 Kryton intentionally does not provide a generic remote command endpoint, direct public RDP exposure, or Windows licensing bypass functionality.
 
-Production operators should use authentication, TLS at the application or ingress layer, least-privilege Kubernetes RBAC, NetworkPolicy, and administrator-managed Windows image sources.
+Production operators should use authentication, TLS at the application or ingress layer, least-privilege Kubernetes RBAC, NetworkPolicy, and administrator-managed Windows image sources. How to mint and retrieve API keys: [docs/AUTH.md](docs/AUTH.md).

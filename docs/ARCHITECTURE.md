@@ -111,7 +111,7 @@ Other products discover Kryton via `GET /api/v1` and `GET /openapi.yaml`. Cross-
 
 Kryton does not expose raw QEMU, RDP, WinRM, or arbitrary PowerShell execution through the API.
 
-- **API keys** for service-to-service use (SHA-256 digests stored, raw tokens never persisted).
+- **API keys** for service-to-service use (SHA-256 digests stored, raw tokens never persisted). How to mint and retrieve keys: [AUTH.md](AUTH.md).
 - **Proxy auth** for browser SSO via trusted reverse proxy headers.
 - Production KubeVirt mode refuses to start with authentication disabled unless the operator explicitly opts into insecure operation (`KRYTON_ALLOW_INSECURE=true`).
 - The dockur provider is intended for labs; use API-key auth on shared hosts.

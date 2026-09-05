@@ -25,6 +25,17 @@ After a successful deploy the demo control plane listens on port **8080** (overr
 http://<host>:8080/
 ```
 
+Default unit uses **`KRYTON_AUTH_MODE=disabled`**. For a shared host, turn on API keys before exposing the port:
+
+```bash
+ssh <user>@<host>
+cd ~/.deployments/kryton
+./scripts/ensure-api-keys.sh
+cat ~/.kryton/lab.token    # paste into the UI Sign in chapter, or export KRYTON_TOKEN
+```
+
+How to create, rotate, and use keys (browser + CLI + Helm): **[AUTH.md](AUTH.md)**.
+
 If the port is firewalled, tunnel:
 
 ```bash
@@ -64,7 +75,7 @@ ssh <user>@<host> krytonctl doctor
 | `/etc/systemd/system/kryton.service` | Demo unit (`KRYTON_PROVIDER=demo`, auth disabled) |
 | `~/.deployments/kryton` | Remote source checkout (override with `DEPLOY_DIR`) |
 
-The systemd unit is intentionally a **lab demo**. For production KubeVirt, use Helm (`deploy/helm/kryton`) and set `KRYTON_PROVIDER=kubevirt` with API-key auth — see [DEPLOYMENT.md](DEPLOYMENT.md).
+The systemd unit is intentionally a **lab demo** (auth disabled). For a shared lab, enable apikey auth — see [AUTH.md](AUTH.md). For production KubeVirt, use Helm (`deploy/helm/kryton`) with API-key auth — see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ### Switching to dockur after deploy
 

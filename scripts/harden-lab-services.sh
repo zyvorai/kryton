@@ -158,9 +158,11 @@ Lab hardened (apikey auth).
 
   Token file: ${KEYS_DIR}/lab.token
   Keys file:  ${KEYS_FILE}
+  Show key:   cat ${KEYS_DIR}/lab.token
+  Docs:       docs/AUTH.md
 
   export KRYTON_TOKEN=\$(cat ${KEYS_DIR}/lab.token)
   export KRYTON_URL=http://${PUBLIC_HOST}:${DOCKUR_PORT}
 
-Paste the token in the UI auth dialog on first visit (skip when KRYTON_LAB_AUTO_AUTH=true — UI auto-connects).
+Browser: open the UI → Sign in chapter → paste the token (skip when KRYTON_LAB_AUTO_AUTH=true — UI auto-connects).
 EOF

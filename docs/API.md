@@ -2,6 +2,8 @@
 
 Kryton exposes a versioned REST API under `/api/v1`. All machine operations are scoped to a **project**. Authentication uses bearer tokens (`KRYTON_TOKEN`) or trusted proxy headers when configured.
 
+**How to get a token:** [AUTH.md](AUTH.md) (`./scripts/ensure-api-keys.sh` → `cat ~/.kryton/lab.token`, or `krytonctl generate-token` for Helm/CI).
+
 OpenAPI spec: [`openapi.yaml`](../openapi.yaml).
 
 ---
@@ -80,9 +82,15 @@ Environment=KRYTON_CORS_ORIGINS=https://axiom.example,https://haven.example
 
 | Mode | How |
 |------|-----|
-| `apikey` | `Authorization: Bearer <token>` (hash with `krytonctl hash-token`) |
+| `apikey` | `Authorization: Bearer <token>` — create with [AUTH.md](AUTH.md); hash with `krytonctl hash-token` for `keys.json` |
 | `proxy` | Edge sets `X-Kryton-User`, `X-Kryton-Role`, `X-Kryton-Projects`, `X-Kryton-Proxy-Secret` |
 | `disabled` | Lab only (`KRYTON_ALLOW_INSECURE=true`) |
+
+```bash
+# Lab shortcut
+export KRYTON_TOKEN=$(cat ~/.kryton/lab.token)
+# or: export KRYTON_TOKEN=$(ssh user@host 'cat ~/.kryton/lab.token')
+```
 
 **Minimal create flow:**
 

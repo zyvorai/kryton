@@ -125,7 +125,7 @@ krytonctl create --image windows-11-enterprise prod-win-01
 | **Activity** | Event timeline · SSE stream |
 | **Settings** | Storage class · Atlas · auth |
 
-Browser auth: paste API token once, or use **lab auto-auth** (`KRYTON_LAB_AUTO_AUTH=true` on shared labs).
+Browser auth: paste API token once on the login chapters, or use **lab auto-auth** (`KRYTON_LAB_AUTO_AUTH=true` on shared labs). **How to get the key:** [docs/AUTH.md](docs/AUTH.md).
 
 ### CLI quick reference
 
@@ -336,11 +336,21 @@ Deep dive: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** · **[docs/ARCHITECTURE.
 
 Roles: `viewer` · `operator` · `admin` (always intersected with project scope).
 
+**Get a lab key** (on the Kryton host):
+
 ```bash
-export KRYTON_TOKEN='<raw token>'
+./scripts/ensure-api-keys.sh
+cat ~/.kryton/lab.token          # raw bearer — paste in UI or export below
+# from a laptop: ssh <user>@<host> 'cat ~/.kryton/lab.token'
+```
+
+```bash
+export KRYTON_TOKEN="$(cat ~/.kryton/lab.token)"   # or paste the raw token
 export KRYTON_PROJECT=finance
 krytonctl list
 ```
+
+Browser: open the UI → **Sign in** chapter → paste the token (unless lab auto-auth is on). Full guide: **[docs/AUTH.md](docs/AUTH.md)** (create, rotate, Helm, troubleshooting).
 
 For browser SSO, terminate identity at a reverse proxy and set `X-Kryton-User` / `X-Kryton-Role` / `X-Kryton-Projects` with `KRYTON_AUTH_MODE=proxy`.
 

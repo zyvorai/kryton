@@ -59,9 +59,13 @@ Do not set `replicaCount > 1`. `internal/reconciler/ttl.go` has no leader electi
 ```bash
 TOKEN=$(krytonctl generate-token)
 HASH=$(krytonctl hash-token "$TOKEN")
+# Keep TOKEN in your secret manager — only the hash goes in the cluster.
 kubectl -n kryton create secret generic kryton-auth \
   --from-literal=keys.json="{\"keys\":[{\"name\":\"ops\",\"sha256\":\"$HASH\",\"role\":\"admin\",\"projects\":[\"*\"]}]}"
+echo "Export for CLI/CI: export KRYTON_TOKEN=$TOKEN"
 ```
+
+Lab hosts (non-Helm): `./scripts/ensure-api-keys.sh` then `cat ~/.kryton/lab.token`. Full guide: [docs/AUTH.md](../../../docs/AUTH.md).
 
 For `proxy` mode, the same secret instead holds a proxy shared-secret file — see [docs/API.md](../../../docs/API.md).
 

@@ -5,6 +5,7 @@ Start here, then drill into the guide that matches your role.
 | I want to… | Read |
 |------------|------|
 | **Understand what Kryton is and pick a path** | [USER-GUIDE.md](USER-GUIDE.md) · [ARCHITECTURE.md](ARCHITECTURE.md) |
+| **Get / rotate the API key and sign in** | [AUTH.md](AUTH.md) |
 | **Try it locally in 5 minutes (demo)** | [USER-GUIDE.md § Evaluator](USER-GUIDE.md#1-evaluator-local-demo) · [README](../README.md#quick-start) |
 | **Run real Windows in a lab (dockur)** | [USER-GUIDE.md § Lab operator](USER-GUIDE.md#2-lab-operator-dockur) · [DOCKUR.md](DOCKUR.md) |
 | **Deploy to a remote Linux host over SSH** | [DEPLOY-REMOTE.md](DEPLOY-REMOTE.md) |
@@ -31,6 +32,7 @@ Start here, then drill into the guide that matches your role.
 | Script | Purpose |
 |--------|---------|
 | `scripts/deploy-remote.sh` | SSH/rsync install (demo unit) |
+| `scripts/ensure-api-keys.sh` | Create `~/.kryton/lab.token` + hashed `keys.json` |
 | `scripts/harden-lab-services.sh` | apikey + systemd for dockur/kubevirt lab |
 | `scripts/lab-recover.sh` | Free hung ports before long jobs |
 | `scripts/build-golden-image.sh` | dockur → Sysprep → golden qcow2 |

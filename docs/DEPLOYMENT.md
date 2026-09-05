@@ -103,7 +103,16 @@ helm upgrade --install kryton ./deploy/helm/kryton -n kryton -f deploy/helm/kryt
 
 ## Authentication
 
+**Step-by-step key creation (lab + Helm):** [AUTH.md](AUTH.md).
+
 For machine-to-machine access, use `KRYTON_AUTH_MODE=apikey` and mount a JSON key file from a Kubernetes Secret. Store SHA-256 token digests rather than raw tokens.
+
+```bash
+TOKEN=$(krytonctl generate-token)
+HASH=$(krytonctl hash-token "$TOKEN")
+# Build keys.json with "sha256": "$HASH", save TOKEN outside the cluster, then:
+kubectl -n kryton create secret generic kryton-auth --from-file=keys.json
+```
 
 For browser SSO, place Kryton behind an authenticated reverse proxy and use `KRYTON_AUTH_MODE=proxy`. The proxy must strip inbound `X-Kryton-*` headers, set trusted identity headers itself, and send the shared `X-Kryton-Proxy-Secret` value loaded by Kryton from `KRYTON_PROXY_SECRET_FILE`. Do not expose the Kryton service directly when proxy auth is enabled.
 
