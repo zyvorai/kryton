@@ -192,10 +192,13 @@
     <span class="login-localnav-host" id="loginNavHost"></span>
   </nav>
   <main class="login-store-scroll" aria-label="Sign in to Kryton">
-    <section id="login-product" class="login-chapter login-chapter-hero" data-tone="sky" aria-label="Kryton">
+    <section id="login-product" class="login-chapter login-chapter-hero" data-tone="zyvor" aria-label="Kryton">
       <div class="login-chapter-inner">
-        <img class="login-mark brand-logo" src="/zyvor-mark.svg" alt="" width="56" height="56">
+        <a class="login-mark-link" href="https://zyvor.dev" target="_blank" rel="noopener noreferrer" title="Zyvor">
+          <img class="login-mark brand-logo" src="/zyvor-mark.svg" alt="Zyvor" width="56" height="56">
+        </a>
         <p class="login-wordmark">Kryton</p>
+        <p class="login-byline">by Zyvor</p>
         <h1 class="login-hero-title">Windows control plane.</h1>
         <p class="login-tagline">One API for Windows VMs across demo, dockur, and KubeVirt. Confirm this machine, then connect.</p>
         <div class="login-pill-row">
@@ -232,6 +235,7 @@
 
     <section id="login-sign-in" class="login-chapter login-chapter-sign-in" aria-label="Credentials">
       <div class="login-chapter-inner login-sign-in-inner">
+        <img class="login-mark-sm" src="/zyvor-mark.svg" alt="" width="36" height="36">
         <p class="login-sign-in-context">Signing in to <strong>Kryton</strong> on <span class="login-apple-host" id="loginSignHost">localhost</span></p>
         <p class="login-form-heading">Connect with an API key</p>
         <div class="login-card" id="loginCard">
@@ -246,7 +250,7 @@
       </div>
     </section>
   </main>
-  <p class="login-footer">Kryton by Zyvor · zyvor.dev</p>
+  <p class="login-footer">Kryton by <a href="https://zyvor.dev" target="_blank" rel="noopener noreferrer">Zyvor</a> · zyvor.dev</p>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="/app.js" defer></script>

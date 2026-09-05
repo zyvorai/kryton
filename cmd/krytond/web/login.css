@@ -19,12 +19,18 @@
   --tone-amber: #bf7a00;
   --tone-amber-tint: rgba(191, 122, 0, 0.12);
   --tone-amber-glow: rgba(191, 122, 0, 0.24);
+  /* zyvor.dev brand orange — used sparingly on login (wordmark + soft glow) */
+  --tone-zyvor: #cc420a;
+  --tone-zyvor-bright: #ff5a15;
+  --tone-zyvor-tint: rgba(204, 66, 10, 0.08);
+  --tone-zyvor-glow: rgba(255, 90, 21, 0.16);
 }
 
 [data-tone='sky']     { --tone-color: var(--tone-sky);     --tone-wash: var(--tone-sky-tint);     --tone-glow: var(--tone-sky-glow); }
 [data-tone='violet']  { --tone-color: var(--tone-violet);  --tone-wash: var(--tone-violet-tint);  --tone-glow: var(--tone-violet-glow); }
 [data-tone='emerald'] { --tone-color: var(--tone-emerald); --tone-wash: var(--tone-emerald-tint); --tone-glow: var(--tone-emerald-glow); }
 [data-tone='amber']   { --tone-color: var(--tone-amber);   --tone-wash: var(--tone-amber-tint);   --tone-glow: var(--tone-amber-glow); }
+[data-tone='zyvor']   { --tone-color: var(--tone-zyvor);   --tone-wash: var(--tone-zyvor-tint);   --tone-glow: var(--tone-zyvor-glow); }
 
 @keyframes login-fade-in-up {
   from { opacity: 0; transform: translateY(10px); }
@@ -600,3 +606,55 @@ a.login-cta-secondary:active {
 .auth-backdrop.open{display:block}
 body.login-locked .app-shell,
 body.login-locked .ambient{visibility:hidden}
+
+
+/* ── Zyvor brand accent (very light) ── */
+.login-mark-link {
+  display: inline-flex;
+  margin-bottom: 0.35rem;
+  border-radius: 16px;
+  transition: transform 0.15s ease;
+}
+.login-mark-link:hover { transform: translateY(-1px); }
+.login-page .login-mark {
+  display: block;
+  border-radius: 14px;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 14px 32px -14px rgba(255, 90, 21, 0.55);
+}
+.login-mark-sm {
+  display: block;
+  margin: 0 auto 0.85rem;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px -10px rgba(255, 90, 21, 0.45);
+}
+.login-page .login-wordmark {
+  color: var(--tone-zyvor, #cc420a);
+}
+.login-byline {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: hsl(240 3% 55%);
+}
+.login-chapter-hero[data-tone='zyvor']::before {
+  opacity: 0.38; /* quieter than default sky glow */
+  background: radial-gradient(55% 70% at 50% 8%, rgba(255, 90, 21, 0.18), transparent 70%);
+}
+.login-localnav a:hover {
+  color: var(--tone-zyvor-bright, #ff5a15);
+}
+.login-footer a {
+  color: var(--tone-zyvor, #cc420a);
+  text-decoration: none;
+  font-weight: 600;
+}
+.login-footer a:hover { text-decoration: underline; }
+/* Keep Action Blue CTAs; warm focus ring on token field only slightly */
+.login-page .login-input:focus {
+  border-color: color-mix(in srgb, var(--tone-zyvor-bright, #ff5a15) 55%, hsl(211 100% 45%));
+  box-shadow: 0 0 0 3px rgba(255, 90, 21, 0.12);
+}
