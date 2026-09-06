@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: Apache-2.0
 # Sequential Kryton golden builds for all catalog images (host-side, against :9088).
 # Usage on lab host: KRYTON_TOKEN=$(cat ~/.kryton/lab.token) ./e2e-kryton-golden-host.sh
 set -euo pipefail

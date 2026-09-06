@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright 2026 Kryton contributors
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
 # SPDX-License-Identifier: Apache-2.0
 # Run KubeVirt production setup on a remote lab host (rsync + SSH + nohup for long golden builds).
 set -euo pipefail

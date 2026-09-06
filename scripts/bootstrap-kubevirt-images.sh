@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
 # SPDX-License-Identifier: Apache-2.0
 # Bootstrap CDI DataSources for Kryton Windows images on KubeVirt.
 set -euo pipefail

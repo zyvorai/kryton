@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright 2026 Kryton contributors
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
 # SPDX-License-Identifier: Apache-2.0
 # Recover a hung lab host before long-running Kryton jobs (free ports, restart APIs).
 set -euo pipefail

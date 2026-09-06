@@ -1,4 +1,4 @@
-// Copyright 2026 Kryton contributors
+// Copyright 2026 Zyvor AI Labs · https://zyvor.dev
 // SPDX-License-Identifier: Apache-2.0
 
 const cfg = JSON.parse(document.getElementById('console-config').textContent);

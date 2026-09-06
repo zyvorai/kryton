@@ -1,4 +1,4 @@
-# Copyright 2026 Kryton contributors
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
 # SPDX-License-Identifier: Apache-2.0
 # Pinned by digest so builds are reproducible; bump via .github/dependabot.yml
 # (docker ecosystem) or by re-resolving the tag's current digest.
