@@ -76,7 +76,7 @@ setup-kubevirt-production:
 	@./scripts/setup-kubevirt-production.sh \
 		$(if $(filter 1,$(BUILD)),--build-golden,) \
 		$(if $(filter 1,$(SKIP)),--skip-create,) \
-		$(if $(filter 1,$(CUSTOMER)),--customer-helm,) \
+		$(if $(filter 1,$(USER_HELM)),--user-helm,) \
 		$(if $(IMAGE),--image $(IMAGE),) $(ARGS)
 
 run-kubevirt-production-remote:

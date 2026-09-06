@@ -34,7 +34,7 @@ Without auto-auth, open the UI login chapters and paste the token from `lab.toke
 
 For CLI/scripts: `export KRYTON_TOKEN=$(cat ~/.kryton/lab.token)`
 
-Full guide (create, rotate, Helm, troubleshooting): [AUTH.md](AUTH.md) · [CUSTOMER.md](CUSTOMER.md).
+Full guide (create, rotate, Helm, troubleshooting): [AUTH.md](AUTH.md) · [USER.md](USER.md).
 
 ---
 

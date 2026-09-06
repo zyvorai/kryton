@@ -1,4 +1,4 @@
-# Customer / production profile: KubeVirt + API key auth + Rook Ceph disks.
+# User / production profile: KubeVirt + API key auth + Rook Ceph disks.
 provider: kubevirt
 projects: [default]
 defaultProject: default

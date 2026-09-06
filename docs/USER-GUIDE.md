@@ -200,11 +200,11 @@ KRYTON_WINDOWS_IMAGE=./out/windows-11e-golden.qcow2 \
 make run-kubevirt-production-remote H=<host> U=<user> BUILD=1
 ```
 
-### Customer Helm profile
+### User Helm profile
 
 ```bash
 ./scripts/setup-kubevirt-production.sh \
-  --customer-helm \
+  --user-helm \
   --image ./out/windows-11e-golden.qcow2
 ```
 
@@ -213,7 +213,7 @@ Or manually:
 ```bash
 helm upgrade --install kryton ./deploy/helm/kryton \
   -n kryton --create-namespace \
-  -f deploy/helm/kryton/values-customer.yaml
+  -f deploy/helm/kryton/values-user.yaml
 ```
 
 ### Verify readiness
@@ -239,7 +239,7 @@ krytonctl snapshots <uuid>
 krytonctl restore <uuid> <snapshot-id>
 ```
 
-Full details: [KUBEVIRT.md](KUBEVIRT.md) · [CUSTOMER.md](CUSTOMER.md) · [GA.md](GA.md).
+Full details: [KUBEVIRT.md](KUBEVIRT.md) · [USER.md](USER.md) · [GA.md](GA.md).
 
 ---
 

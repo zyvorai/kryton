@@ -37,7 +37,7 @@ Reliability and hardening release — no breaking changes.
 - **UI** — Dockur create panel, detail **Dockur options** summary, Copy RDP, embedded noVNC console (no CDN dependency).
 - **CLI** — `krytonctl create … --dockur-*` flags for all dockur fields.
 - **Lab hardening** — `scripts/ensure-api-keys.sh`, `scripts/harden-lab-services.sh` (apikey auth on shared lab hosts).
-- **Customer profile** — `deploy/helm/kryton/values-customer.yaml`, [docs/CUSTOMER.md](docs/CUSTOMER.md).
+- **User profile** — `deploy/helm/kryton/values-user.yaml`, [docs/USER.md](docs/USER.md).
 
 ### Fixed
 

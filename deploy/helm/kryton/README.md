@@ -4,7 +4,7 @@ Deploys `krytond` to Kubernetes with the `kubevirt` provider — the production 
 
 ```bash
 helm upgrade --install kryton ./deploy/helm/kryton -n kryton --create-namespace \
-  -f deploy/helm/kryton/values-customer.yaml
+  -f deploy/helm/kryton/values-user.yaml
 ```
 
 ## Values files
@@ -13,11 +13,11 @@ helm upgrade --install kryton ./deploy/helm/kryton -n kryton --create-namespace 
 |------|----------|
 | [`values.yaml`](values.yaml) | Chart defaults — starting point, no overlay needed for reference |
 | [`values-lab.yaml`](values-lab.yaml) | Shared lab/demo cluster: auth **disabled**, NodePort `30088`, local image tag |
-| [`values-customer.yaml`](values-customer.yaml) | Production: `apikey` auth, ingress + TLS, `rook-ceph-block` storage |
+| [`values-user.yaml`](values-user.yaml) | Production: `apikey` auth, ingress + TLS, `rook-ceph-block` storage |
 | [`values-rook-ceph.yaml`](values-rook-ceph.yaml) | Overlay-only: point `storageClass` at Rook Ceph RBD (snapshots + clones) |
 | [`values-longhorn.yaml`](values-longhorn.yaml) | Overlay-only: point `storageClass` at Longhorn CSI (lab snapshots) |
 
-The two storage overlays are meant to be layered on top of `values.yaml` or `values-customer.yaml` with `-f`, not used alone — see [docs/STORAGE.md](../../../docs/STORAGE.md) for the Rook Ceph vs. Longhorn tradeoffs and `scripts/enable-rook-ceph.sh` / `scripts/enable-kubevirt-snapshots.sh` for installing the storage layer itself.
+The two storage overlays are meant to be layered on top of `values.yaml` or `values-user.yaml` with `-f`, not used alone — see [docs/STORAGE.md](../../../docs/STORAGE.md) for the Rook Ceph vs. Longhorn tradeoffs and `scripts/enable-rook-ceph.sh` / `scripts/enable-kubevirt-snapshots.sh` for installing the storage layer itself.
 
 ## Key values
 

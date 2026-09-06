@@ -1,4 +1,4 @@
-# Customer readiness
+# User readiness
 
 What “done” means for external deployments.
 
@@ -10,7 +10,7 @@ Follow [GA.md](GA.md) end-to-end:
 
 1. KubeVirt + CDI + snapshot-capable CSI (Rook Ceph or Longhorn).
 2. Sysprepped golden qcow2 → CDI `DataSource` per catalog ID ([GOLDEN-IMAGES.md](GOLDEN-IMAGES.md)).
-3. Helm with `values-customer.yaml` (or `values-rook-ceph.yaml` + `auth.mode: apikey`).
+3. Helm with `values-user.yaml` (or `values-rook-ceph.yaml` + `auth.mode: apikey`).
 4. `krytonctl doctor` — no `fail` findings.
 5. Create → snapshot → restore → delete lifecycle smoke test.
 
@@ -26,8 +26,8 @@ KRYTON_WINDOWS_IMAGE=/path/to/windows11.qcow2 ./scripts/setup-kubevirt.sh
 # Option C — from your laptop (rsync + remote nohup)
 make run-kubevirt-production-remote H=<host> U=<user> BUILD=1
 
-# Option D — Helm customer profile (after golden exists on cluster)
-./scripts/setup-kubevirt-production.sh --customer-helm --skip-create --image ./out/windows-11e-golden.qcow2
+# Option D — Helm user profile (after golden exists on cluster)
+./scripts/setup-kubevirt-production.sh --user-helm --skip-create --image ./out/windows-11e-golden.qcow2
 ```
 
 ## Lab / eval (dockur)
@@ -61,6 +61,6 @@ See [DOCKUR.md](DOCKUR.md) for create options (UI, API, `krytonctl --dockur-*`).
 
 | Profile | Provider | Auth | Use case |
 |---------|----------|------|----------|
-| Customer | `kubevirt` | `apikey` + TLS | Production private cloud |
+| User | `kubevirt` | `apikey` + TLS | Production private cloud |
 | Lab secure | `dockur` / `kubevirt` | `apikey` | Shared lab hosts |
 | Dev only | `demo` | `disabled` | Local UI hacking |

@@ -144,7 +144,7 @@ EOF
 kubectl -n kryton create secret generic kryton-auth --from-file=keys.json
 helm upgrade --install kryton ./deploy/helm/kryton \
   -n kryton --create-namespace \
-  -f deploy/helm/kryton/values-customer.yaml
+  -f deploy/helm/kryton/values-user.yaml
 ```
 
 Use `export KRYTON_TOKEN=<saved raw token>` for `krytonctl` / CI. Chart details: [deploy/helm/kryton/README.md](../deploy/helm/kryton/README.md) · [DEPLOYMENT.md](DEPLOYMENT.md).

@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 BUILD_GOLDEN=false
-CUSTOMER_HELM=false
+USER_HELM=false
 HTTP_MODE=false
 SKIP_CREATE=false
 IMAGE=""
@@ -23,14 +23,14 @@ Usage:
   KRYTON_WINDOWS_IMAGE=/path/to/win11.qcow2 $0
   $0 --build-golden                         # build sysprepped qcow2 first (dockur, ~45–90m)
   $0 --build-golden --skip-create           # bootstrap only
-  $0 --customer-helm --build-golden         # Helm values-customer.yaml profile
+  $0 --user-helm --build-golden         # Helm values-user.yaml profile
 
 Examples:
   $0 --build-golden
   KRYTON_WINDOWS_IMAGE=./out/windows-11e-golden.qcow2 $0
   make setup-kubevirt-production BUILD=1
 
-See docs/GOLDEN-IMAGES.md and docs/CUSTOMER.md.
+See docs/GOLDEN-IMAGES.md and docs/USER.md.
 EOF
 }
 
@@ -38,7 +38,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     -h|--help) usage; exit 0 ;;
     --build-golden) BUILD_GOLDEN=true; shift ;;
-    --customer-helm) CUSTOMER_HELM=true; shift ;;
+    --user-helm) USER_HELM=true; shift ;;
     --http) HTTP_MODE=true; shift ;;
     --image) IMAGE="$2"; shift 2 ;;
     --id) IMAGE_ID="$2"; shift 2 ;;
@@ -81,9 +81,9 @@ if [ -n "${IMAGE}" ] || [ -f "${GOLDEN_OUT}" ]; then
   SETUP_ARGS+=(--image "${GOLDEN_OUT}")
 fi
 
-if [ "${CUSTOMER_HELM}" = true ]; then
-  export KRYTON_HELM_VALUES="${PROJECT_DIR}/deploy/helm/kryton/values-customer.yaml"
-  SETUP_ARGS+=(--helm --customer)
+if [ "${USER_HELM}" = true ]; then
+  export KRYTON_HELM_VALUES="${PROJECT_DIR}/deploy/helm/kryton/values-user.yaml"
+  SETUP_ARGS+=(--helm --user)
 fi
 
 echo "=== Kryton KubeVirt production setup ==="

@@ -17,7 +17,7 @@ VM_NAME="win11-k8s-01"
 SKIP_CREATE=false
 SKIP_BOOTSTRAP=false
 INSECURE=false
-CUSTOMER_HELM=false
+USER_HELM=false
 
 usage() {
   cat <<EOF
@@ -66,7 +66,7 @@ while [ $# -gt 0 ]; do
     --skip-create) SKIP_CREATE=true; shift ;;
     --skip-bootstrap) SKIP_BOOTSTRAP=true; shift ;;
     --insecure) INSECURE=true; shift ;;
-    --customer) CUSTOMER_HELM=true; shift ;;
+    --user) USER_HELM=true; shift ;;
     *) echo "unknown arg: $1" >&2; usage; exit 1 ;;
   esac
 done
@@ -120,8 +120,8 @@ if [ "${MODE}" = helm ]; then
   fi
   echo "→ Installing Helm release"
   HELM_VALUES="${KRYTON_HELM_VALUES:-${PROJECT_DIR}/deploy/helm/kryton/values-lab.yaml}"
-  if [ "${CUSTOMER_HELM}" = true ]; then
-    HELM_VALUES="${PROJECT_DIR}/deploy/helm/kryton/values-customer.yaml"
+  if [ "${USER_HELM}" = true ]; then
+    HELM_VALUES="${PROJECT_DIR}/deploy/helm/kryton/values-user.yaml"
   fi
   helm upgrade --install kryton "${PROJECT_DIR}/deploy/helm/kryton" \
     -n kryton --create-namespace \

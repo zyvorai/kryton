@@ -11,7 +11,7 @@ One stable machine API. Kubernetes, KubeVirt, and dockur stay behind the provide
 [![Go](https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
 [![Go Reference](https://pkg.go.dev/badge/github.com/zyvorai/kryton.svg)](https://pkg.go.dev/github.com/zyvorai/kryton)
 
-[Quick start](#quick-start) · **[How to use](#how-to-use-kryton)** · [User guide](docs/USER-GUIDE.md) · [Customer ready](docs/CUSTOMER.md) · [KubeVirt](#kubevirt-windows-vms) · [Remote deploy](#remote-deploy) · [Dockur lab](#dockur-lab-provider) · [Helm](#helm-kubevirt) · [API](#api) · [All docs](docs/README.md)
+[Quick start](#quick-start) · **[How to use](#how-to-use-kryton)** · [User guide](docs/USER-GUIDE.md) · [User ready](docs/USER.md) · [KubeVirt](#kubevirt-windows-vms) · [Remote deploy](#remote-deploy) · [Dockur lab](#dockur-lab-provider) · [Helm](#helm-kubevirt) · [API](#api) · [All docs](docs/README.md)
 
 </div>
 
@@ -451,7 +451,7 @@ make fmt          # gofmt -w cmd internal
 | [docs/README.md](docs/README.md) | Documentation index |
 | [DEPLOY-REMOTE.md](docs/DEPLOY-REMOTE.md) | SSH / rsync lab deploy |
 | [DOCKUR.md](docs/DOCKUR.md) | Real Windows via dockur/windows provider |
-| [CUSTOMER.md](docs/CUSTOMER.md) | Production vs lab readiness checklist |
+| [USER.md](docs/USER.md) | Production vs lab readiness checklist |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production KubeVirt |
 | [STORAGE.md](docs/STORAGE.md) | Rook Ceph / Longhorn disks and snapshots |
 | [ATLAS.md](docs/ATLAS.md) | Integrate Zyvor Atlas storage control plane |
