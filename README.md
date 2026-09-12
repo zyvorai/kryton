@@ -468,6 +468,14 @@ make fmt          # gofmt -w cmd internal
 
 ## License
 
-Apache License 2.0. See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
+### Open source (Apache-2.0)
 
-**Kryton** — Windows virtualization control plane. · [zyvorai](https://github.com/zyvorai)
+This repository is licensed under the [Apache License, Version 2.0](LICENSE).
+You may use, modify, and run it for personal, lab, and commercial production
+use at no charge, subject to Apache-2.0 (preserve notices / NOTICE where required).
+See [NOTICE](NOTICE).
+
+### Enterprise
+
+Production support, SLAs, and Zyvor Enterprise products are licensed separately.
+Contact [sales@zyvor.dev](mailto:sales@zyvor.dev) or see [zyvor.dev](https://zyvor.dev).
