@@ -17,6 +17,39 @@ One stable machine API. Kubernetes, KubeVirt, and dockur stay behind the provide
 
 ---
 
+## Is this for you?
+
+Kryton is a small, open-source (Apache-2.0) **control-plane API** for Windows
+workloads — one stable REST+CloudEvents contract in front of interchangeable
+backends (demo, dockur, KubeVirt). It is not a Windows installer or
+activation service, not a raw KubeVirt YAML factory, and not a full desktop
+virtualization/VDI product in its own right.
+
+| | **Kryton** | VMware Horizon / Citrix VDI | Windows Admin Center | Hyper-V Manager / Failover Clustering | Plain KubeVirt |
+|---|---|---|---|---|---|
+| Primary scope | Stable machine API over interchangeable Windows backends | Full VDI (desktop delivery, brokering, image mgmt) | Windows Server management console | Native Hyper-V VM management/clustering | Kubernetes-native VM CRDs, no stable app-facing API layer |
+| API-first | Yes — REST + CloudEvents is the product | Limited/proprietary | Limited (GUI-first) | PowerShell/WMI, not a REST product | Kubernetes API directly (steep for app integrators) |
+| License | Apache-2.0 | Proprietary | Free with Windows Server, proprietary | Free with Windows Server, proprietary | Apache-2.0 |
+| Windows media/licensing | Not shipped — operator's responsibility | Bundled/licensed via vendor | N/A (management only) | N/A (management only) | Not shipped |
+| Lab-to-production path | Same API, `demo`→`dockur`(lab)→`kubevirt`(production) | Separate lab/prod tooling typically | N/A | N/A | You build the app-facing layer yourself |
+
+*(General characterizations as of writing — verify current features against
+each project's own docs.)*
+
+**Maturity, stated honestly**: see [`docs/GA.md`](docs/GA.md) for the exact
+production go-live checklist — it explicitly states the `dockur` lab
+provider "remains a lab installer, not GA," and multi-replica `krytond` is
+explicitly out of GA scope today (single-writer TTL reconciler and
+in-process event bus — see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)).
+The KubeVirt provider is the GA path.
+
+New here? [`docs/FAQ.md`](docs/FAQ.md) covers licensing, support, and
+production-readiness questions. Troubleshooting is covered inline in
+[`docs/USER-GUIDE.md`](docs/USER-GUIDE.md#troubleshooting),
+[`docs/AUTH.md`](docs/AUTH.md#troubleshooting), and
+[`docs/KUBEVIRT.md`](docs/KUBEVIRT.md#troubleshooting) rather than a
+separate document.
+
 ## Contents
 
 - [How to use Kryton](#how-to-use-kryton)
@@ -448,6 +481,7 @@ make fmt          # gofmt -w cmd internal
 | Doc | Topic |
 |-----|--------|
 | **[USER-GUIDE.md](docs/USER-GUIDE.md)** | **How to use Kryton — all personas (start here)** |
+| [FAQ.md](docs/FAQ.md) | Licensing, support, production-readiness questions |
 | [docs/README.md](docs/README.md) | Documentation index |
 | [DEPLOY-REMOTE.md](docs/DEPLOY-REMOTE.md) | SSH / rsync lab deploy |
 | [DOCKUR.md](docs/DOCKUR.md) | Real Windows via dockur/windows provider |
