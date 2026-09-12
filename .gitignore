@@ -24,3 +24,4 @@ package-lock.json
 # MkDocs
 .venv-docs/
 /site/
+__pycache__/

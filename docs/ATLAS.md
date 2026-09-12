@@ -1,4 +1,8 @@
-# Kryton ↔ Atlas integration
+---
+hero:
+  eyebrow: ATLAS
+  title: Kryton ↔ Atlas integration
+---
 
 [Atlas](https://github.com/zyvorai/atlas) (a sibling repo, `../../atlas` from this repo on disk) is Zyvor’s **storage control plane**.
 Kryton is the **Windows virtualization** control plane. Together:

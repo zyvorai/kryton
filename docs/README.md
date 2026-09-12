@@ -1,4 +1,8 @@
-# Kryton documentation
+---
+hero:
+  eyebrow: README
+  title: Kryton documentation
+---
 
 Start here, then drill into the guide that matches your role.
 

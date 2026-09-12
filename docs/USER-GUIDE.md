@@ -1,4 +1,8 @@
-# Kryton user guide
+---
+hero:
+  eyebrow: USER GUIDE
+  title: Kryton user guide
+---
 
 How to use Kryton from first eval through production KubeVirt. One API — three providers.
 

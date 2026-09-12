@@ -1,4 +1,8 @@
-# tt/kryton client presentations
+---
+hero:
+  eyebrow: CLIENT-PRESENTATIONS
+  title: tt/kryton client presentations
+---
 
 H2kvm-format HTML decks (A4 portrait, purple cover, #ff8f3f accent).
 

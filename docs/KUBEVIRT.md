@@ -1,4 +1,8 @@
-# KubeVirt Windows VMs
+---
+hero:
+  eyebrow: KUBEVIRT
+  title: KubeVirt Windows VMs
+---
 
 Provision **Windows 11** (and other catalog images) on Kubernetes via KubeVirt. Kryton exposes the same REST API — callers never touch `VirtualMachine` YAML.
 

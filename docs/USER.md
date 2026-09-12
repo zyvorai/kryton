@@ -1,4 +1,8 @@
-# User readiness
+---
+hero:
+  eyebrow: USER
+  title: User readiness
+---
 
 What “done” means for external deployments.
 

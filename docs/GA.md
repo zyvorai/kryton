@@ -1,4 +1,8 @@
-# Kryton GA path (KubeVirt)
+---
+hero:
+  eyebrow: GA
+  title: Kryton GA path (KubeVirt)
+---
 
 Production Kryton is the **kubevirt** provider behind Helm, hashed API keys, and TLS (ingress or process certificates). Dockur on `:7088` remains a lab installer, not GA.
 

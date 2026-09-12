@@ -1,4 +1,8 @@
-# Authentication — how to get and use the API key
+---
+hero:
+  eyebrow: AUTH
+  title: Authentication — how to get and use the API key
+---
 
 Kryton uses **bearer API keys** for lab and production (`KRYTON_AUTH_MODE=apikey`). The raw token is shown once (or stored in a local `lab.token` file); only a **SHA-256 digest** is kept in `keys.json`.
 

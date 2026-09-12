@@ -1,4 +1,8 @@
-# FAQ
+---
+hero:
+  eyebrow: FAQ
+  title: FAQ
+---
 
 Questions people evaluating Kryton actually ask, before they've decided to
 adopt it. Already decided? [`docs/USER-GUIDE.md`](USER-GUIDE.md) is a

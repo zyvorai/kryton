@@ -1,4 +1,8 @@
-# Kryton VM disks and snapshots
+---
+hero:
+  eyebrow: STORAGE
+  title: Kryton VM disks and snapshots
+---
 
 KubeVirt `VirtualMachineSnapshot` only captures **PVC data** when the disk StorageClass is a **CSI driver with a matching VolumeSnapshotClass**. `rancher.io/local-path` cannot do that.
 

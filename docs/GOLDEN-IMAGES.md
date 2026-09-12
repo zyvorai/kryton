@@ -1,4 +1,8 @@
-# Golden Windows images
+---
+hero:
+  eyebrow: GOLDEN IMAGES
+  title: Golden Windows images
+---
 
 Kryton ships **no Windows media**. Operators build sysprepped golden images and register them as CDI `DataSource` objects in `kryton-images`. The pipeline below is adapted from [WinForge](https://github.com/zyvorai/winforge) — dockur install → Sysprep → qcow2 capture → CDI bootstrap.
 

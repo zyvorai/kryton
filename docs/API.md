@@ -1,4 +1,8 @@
-# API reference
+---
+hero:
+  eyebrow: API
+  title: API reference
+---
 
 Kryton exposes a versioned REST API under `/api/v1`. All machine operations are scoped to a **project**. Authentication uses bearer tokens (`KRYTON_TOKEN`) or trusted proxy headers when configured.
 

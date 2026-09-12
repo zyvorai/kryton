@@ -1,4 +1,8 @@
-# Remote deployment
+---
+hero:
+  eyebrow: DEPLOY REMOTE
+  title: Remote deployment
+---
 
 Deploy Kryton to a Linux host over SSH — same workflow style as GuestKit: **rsync → build → install → verify**.
 

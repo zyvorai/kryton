@@ -1,4 +1,15 @@
-# Kryton architecture
+---
+hero:
+  eyebrow: ARCHITECTURE
+  title: Kryton architecture
+  lead: >-
+    Callers see one stable machine API; providers translate it into demo
+    state, dockur compose stacks, or KubeVirt VirtualMachines.
+  highlights:
+    - {value: "3", label: "Providers behind one contract — demo, dockur, KubeVirt"}
+    - {value: "1", label: "krytond replica — no leader election in the TTL reconciler or event bus yet"}
+    - {value: "SHA-256", label: "API keys stored as digests — raw tokens never persisted"}
+---
 
 Kryton is deliberately split at the **provider boundary**. Callers see one stable machine API; providers translate it into demo state, dockur compose stacks, or KubeVirt VirtualMachines.
 
@@ -26,15 +37,37 @@ Consumers
 
 ---
 
-## Providers
+## Take a closer look
 
-| Provider | Source of truth | Real Windows |
-|----------|-----------------|--------------|
-| **demo** | In-memory map | No — instant fake machines for eval |
-| **dockur** | Compose state under `KRYTON_DOCKUR_DATA_DIR` | Yes — via [dockur/windows](https://github.com/dockur/windows) |
-| **kubevirt** | Kubernetes API | Yes — operator golden images via CDI |
+=== "Demo"
 
-See [DOCKUR.md](DOCKUR.md) for the lab provider. See [DEPLOYMENT.md](DEPLOYMENT.md) for KubeVirt production.
+    | | |
+    |---|---|
+    | Use case | Local eval, CI smoke tests |
+    | Source of truth | In-memory map |
+    | Real Windows | No — instant fake machines for eval |
+
+    Intentionally in-memory; data is lost on restart.
+
+=== "Dockur"
+
+    | | |
+    |---|---|
+    | Use case | Lab hosts with Docker/Podman + KVM |
+    | Source of truth | Compose state under `KRYTON_DOCKUR_DATA_DIR` |
+    | Real Windows | Yes — via [dockur/windows](https://github.com/dockur/windows) |
+
+    Compose projects and disk images persist under `KRYTON_DOCKUR_DATA_DIR`. See [DOCKUR.md](DOCKUR.md) for the lab provider.
+
+=== "KubeVirt"
+
+    | | |
+    |---|---|
+    | Use case | Production Kubernetes estates |
+    | Source of truth | Kubernetes API |
+    | Real Windows | Yes — operator-managed golden images via CDI |
+
+    Kubernetes is authoritative. Kryton is stateless with respect to machine inventory and can be restarted without losing machine identity. See [DEPLOYMENT.md](DEPLOYMENT.md) for production.
 
 ---
 
@@ -43,14 +76,6 @@ See [DOCKUR.md](DOCKUR.md) for the lab provider. See [DEPLOYMENT.md](DEPLOYMENT.
 A Kryton machine receives a **UUID** independent from its provider name. The KubeVirt provider records the UUID and project in labels and preserves the original Kryton specification in a managed annotation. External clients therefore never need to address `namespace/name` directly.
 
 The dockur provider maps UUIDs to compose project directories. The demo provider holds machines in a process-local map.
-
----
-
-## Source of truth
-
-- **KubeVirt** — Kubernetes is authoritative. Kryton is stateless with respect to machine inventory and can be restarted without losing machine identity.
-- **demo** — intentionally in-memory; data is lost on restart.
-- **dockur** — compose projects and disk images persist under `KRYTON_DOCKUR_DATA_DIR`.
 
 ---
 

@@ -1,4 +1,8 @@
-# Dockur lab provider
+---
+hero:
+  eyebrow: DOCKUR
+  title: Dockur lab provider
+---
 
 Kryton can provision **real Windows guests** on a Linux host using [dockur/windows](https://github.com/dockur/windows) — the same engine behind [WinPodX](https://github.com/kernalix7/winpodx) — without a full KubeVirt cluster.
 

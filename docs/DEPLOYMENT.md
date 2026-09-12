@@ -1,4 +1,8 @@
-# Production deployment
+---
+hero:
+  eyebrow: DEPLOYMENT
+  title: Production deployment
+---
 
 For a lab host over SSH (demo or dockur provider + systemd), see **[DEPLOY-REMOTE.md](DEPLOY-REMOTE.md)** and **[DOCKUR.md](DOCKUR.md)**.
 
