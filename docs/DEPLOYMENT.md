@@ -96,7 +96,7 @@ helm upgrade --install kryton ./deploy/helm/kryton -n kryton -f deploy/helm/kryt
 
 - `GET /metrics` exposes Prometheus-text counters. Set `serviceMonitor.enabled: true` in the Helm chart to have a Prometheus Operator scrape it automatically.
 - `podDisruptionBudget.enabled: true` protects against voluntary disruption — but only enable it once running more than one `krytond` replica is actually safe (see below).
-- **Run exactly one `krytond` replica.** The TTL reconciler has no leader election and the event bus is in-process, so more than one replica is unsafe today. Full details: [ARCHITECTURE.md § Single-replica today](ARCHITECTURE.md#single-replica-today), [deploy/helm/kryton/README.md § Single-replica today](../deploy/helm/kryton/README.md#single-replica-today).
+- **Run exactly one `krytond` replica.** The TTL reconciler has no leader election and the event bus is in-process, so more than one replica is unsafe today. Full details: [ARCHITECTURE.md § Single-replica today](ARCHITECTURE.md#single-replica-today), [deploy/helm/kryton/README.md § Single-replica today](https://github.com/zyvorai/kryton/blob/main/deploy/helm/kryton/README.md#single-replica-today).
 - Set `KRYTON_RATE_LIMIT_RPS`/`KRYTON_RATE_LIMIT_BURST` (Helm: `rateLimit.rps`/`.burst`) to protect the API from a noisy caller; see [API.md § Rate limiting](API.md#rate-limiting).
 
 ---

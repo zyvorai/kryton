@@ -4,7 +4,7 @@ Kryton exposes a versioned REST API under `/api/v1`. All machine operations are 
 
 **How to get a token:** [AUTH.md](AUTH.md) (`./scripts/ensure-api-keys.sh` → `cat ~/.kryton/lab.token`, or `krytonctl generate-token` for Helm/CI).
 
-OpenAPI spec: [`openapi.yaml`](../openapi.yaml).
+OpenAPI spec: [`openapi.yaml`](https://github.com/zyvorai/kryton/blob/main/openapi.yaml).
 
 ---
 
@@ -52,7 +52,7 @@ GET    /api/v1/events/stream
 
 Public (no auth): `GET /api/v1` · `GET /openapi.yaml` · `GET /healthz` · `GET /readyz` · `GET /metrics`.
 
-OpenAPI 3.1: [`openapi.yaml`](../openapi.yaml) — also served live at `/openapi.yaml`.
+OpenAPI 3.1: [`openapi.yaml`](https://github.com/zyvorai/kryton/blob/main/openapi.yaml) — also served live at `/openapi.yaml`.
 
 ---
 

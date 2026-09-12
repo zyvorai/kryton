@@ -6,7 +6,7 @@ Start here, then drill into the guide that matches your role.
 |------------|------|
 | **Understand what Kryton is and pick a path** | [USER-GUIDE.md](USER-GUIDE.md) · [ARCHITECTURE.md](ARCHITECTURE.md) |
 | **Get / rotate the API key and sign in** | [AUTH.md](AUTH.md) |
-| **Try it locally in 5 minutes (demo)** | [USER-GUIDE.md § Evaluator](USER-GUIDE.md#1-evaluator-local-demo) · [README](../README.md#quick-start) |
+| **Try it locally in 5 minutes (demo)** | [USER-GUIDE.md § Evaluator](USER-GUIDE.md#1-evaluator-local-demo) · [README](https://github.com/zyvorai/kryton#quick-start) |
 | **Run real Windows in a lab (dockur)** | [USER-GUIDE.md § Lab operator](USER-GUIDE.md#2-lab-operator-dockur) · [DOCKUR.md](DOCKUR.md) |
 | **Deploy to a remote Linux host over SSH** | [DEPLOY-REMOTE.md](DEPLOY-REMOTE.md) |
 | **Production Windows on Kubernetes (KubeVirt)** | [USER-GUIDE.md § Production](USER-GUIDE.md#3-production-operator-kubevirt) · [KUBEVIRT.md](KUBEVIRT.md) · [USER.md](USER.md) |
@@ -16,10 +16,10 @@ Start here, then drill into the guide that matches your role.
 | **Helm install + user values** | [DEPLOYMENT.md](DEPLOYMENT.md) |
 | **Atlas storage integration** | [ATLAS.md](ATLAS.md) |
 | **Go-live checklist** | [GA.md](GA.md) · [USER.md](USER.md) |
-| **Report a security issue** | [SECURITY.md](../SECURITY.md) |
-| **Contribute code** | [CONTRIBUTING.md](../CONTRIBUTING.md) |
-| **See what changed between versions** | [CHANGELOG.md](../CHANGELOG.md) · [RELEASE_NOTES.md](../RELEASE_NOTES.md) |
-| **Configure the Helm chart** | [deploy/helm/kryton/README.md](../deploy/helm/kryton/README.md) |
+| **Report a security issue** | [SECURITY.md](https://github.com/zyvorai/kryton/blob/main/SECURITY.md) |
+| **Contribute code** | [CONTRIBUTING.md](https://github.com/zyvorai/kryton/blob/main/CONTRIBUTING.md) |
+| **See what changed between versions** | [CHANGELOG.md](https://github.com/zyvorai/kryton/blob/main/CHANGELOG.md) · [RELEASE_NOTES.md](https://github.com/zyvorai/kryton/blob/main/RELEASE_NOTES.md) |
+| **Configure the Helm chart** | [deploy/helm/kryton/README.md](https://github.com/zyvorai/kryton/blob/main/deploy/helm/kryton/README.md) |
 
 ## Product site
 

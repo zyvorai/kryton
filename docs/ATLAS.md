@@ -1,6 +1,6 @@
 # Kryton ↔ Atlas integration
 
-[Atlas](../../../atlas) (`../../atlas` from this repo) is Zyvor’s **storage control plane**.
+[Atlas](https://github.com/zyvorai/atlas) (a sibling repo, `../../atlas` from this repo on disk) is Zyvor’s **storage control plane**.
 Kryton is the **Windows virtualization** control plane. Together:
 
 | Product | Owns |
@@ -40,7 +40,7 @@ Use the returned JWT as Kryton’s Atlas token.
 | `POST /api/v1/integrations/atlas/test` | Probe `/readyz`, version, `/storage-classes` |
 | `GET /api/v1` | Discovery (includes Atlas integration route) |
 
-Atlas product conventions: see Atlas [`docs/PRODUCTS.md`](../../../atlas/docs/PRODUCTS.md) — product id **`kryton`**.
+Atlas product conventions: see Atlas [`docs/PRODUCTS.md`](https://github.com/zyvorai/atlas/blob/main/docs/PRODUCTS.md) — product id **`kryton`**.
 
 ## Ownership when creating storage for Windows VMs
 

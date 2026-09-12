@@ -147,7 +147,7 @@ helm upgrade --install kryton ./deploy/helm/kryton \
   -f deploy/helm/kryton/values-user.yaml
 ```
 
-Use `export KRYTON_TOKEN=<saved raw token>` for `krytonctl` / CI. Chart details: [deploy/helm/kryton/README.md](../deploy/helm/kryton/README.md) · [DEPLOYMENT.md](DEPLOYMENT.md).
+Use `export KRYTON_TOKEN=<saved raw token>` for `krytonctl` / CI. Chart details: [deploy/helm/kryton/README.md](https://github.com/zyvorai/kryton/blob/main/deploy/helm/kryton/README.md) · [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ---
 

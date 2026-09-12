@@ -11,7 +11,7 @@ How to use Kryton from first eval through production KubeVirt. One API — three
 | Evaluating the UI/API locally | `demo` | disabled | [§1 Evaluator](#1-evaluator-local-demo) |
 | Running real Windows in a lab | `dockur` | apikey on shared hosts | [§2 Lab operator](#2-lab-operator-dockur) |
 | Operating production K8s estates | `kubevirt` | apikey + TLS | [§3 Production](#3-production-operator-kubevirt) |
-| Wiring a portal or CI pipeline | any | apikey or proxy | [§4 Integrator](#4-integrator-api--automation) |
+| Wiring a portal or CI pipeline | any | apikey or proxy | [§4 Integrator](#4-integrator-api-automation) |
 
 ---
 

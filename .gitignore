@@ -20,3 +20,7 @@ coverage.out
 vendor/
 node_modules/
 package-lock.json
+
+# MkDocs
+.venv-docs/
+/site/

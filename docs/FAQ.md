@@ -8,9 +8,9 @@ better starting point.
 
 **Is it really free?** Yes. Apache-2.0 — use, modify, and run it for
 personal, lab, and commercial production use at no charge, subject to
-preserving notices (see [`NOTICE`](../NOTICE)). No Windows media or license
+preserving notices (see [`NOTICE`](https://github.com/zyvorai/kryton/blob/main/NOTICE)). No Windows media or license
 keys are shipped — that stays the operator's responsibility. See the
-README's [License](../README.md#license) section.
+README's [License](https://github.com/zyvorai/kryton#license) section.
 
 **What does "Enterprise" mean here?** Production support, SLAs, and
 Zyvor's other commercial products are licensed separately. Contact
@@ -20,7 +20,7 @@ sales@zyvor.dev. Nothing in this repository requires it.
 
 **What if I find a bug?** Open a GitHub issue.
 
-**What if I find a security vulnerability?** See [`SECURITY.md`](../SECURITY.md)
+**What if I find a security vulnerability?** See [`SECURITY.md`](https://github.com/zyvorai/kryton/blob/main/SECURITY.md)
 — private reporting via GitHub Security Advisories. Note its own text:
 "Kryton does not yet maintain long-term-support branches. Security fixes
 land on `main` and the latest tagged release; older tags are not
