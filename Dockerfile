@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Pinned by digest so builds are reproducible; bump via .github/dependabot.yml
 # (docker ecosystem) or by re-resolving the tag's current digest.
-FROM golang:1.27@sha256:192b74998e350966280a2cbffbb6c40064754f7ec005096aa64f04d7ece4467e AS build
+FROM golang:1.27@sha256:512690a5660563b57d37ecc31129e7f136e831db2aed24a1dbeb8ad7380dc0fa AS build
 WORKDIR /src
 COPY . .
 RUN CGO_ENABLED=0 go test ./... && \
