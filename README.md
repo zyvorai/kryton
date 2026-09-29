@@ -1,8 +1,8 @@
 # Kryton
 
 [![CI](https://github.com/zyvorai/kryton/actions/workflows/ci.yml/badge.svg)](https://github.com/zyvorai/kryton/actions/workflows/ci.yml)
-[![License: Apache-2.0](https://img.shields.io/github/license/zyvorai/kryton)](LICENSE)
-[![Go](https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![License: Apache-2.0](https://img.shields.io/github/license/zyvorai/kryton?style=flat-square&color=0071e3&labelColor=1d1d1f)](LICENSE)
+[![Go](https://img.shields.io/badge/Go-1.23+-0071e3?style=flat-square&labelColor=1d1d1f&logo=go&logoColor=white)](https://go.dev/)
 [![Go Reference](https://pkg.go.dev/badge/github.com/zyvorai/kryton.svg)](https://pkg.go.dev/github.com/zyvorai/kryton)
 
 ![Kryton — one API, real Windows behind it](docs/social/kryton-share-card.png)
