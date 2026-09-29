@@ -15,32 +15,75 @@
   .top img { height:36px; }
   .top b { color:var(--deep); letter-spacing:.1em; }
   .top .r { margin-left:auto; letter-spacing:.08em; }
-  h1 { margin:36px 0 0; font-size:52px; line-height:1.08; letter-spacing:-.025em; font-weight:700; max-width:1080px; }
+
+  .body { display:flex; flex:1; min-height:0; margin-top:30px; gap:32px; }
+  .left { display:flex; flex-direction:column; width:600px; flex:none; }
+  h1 { margin:0; font-size:48px; line-height:1.08; letter-spacing:-.025em; font-weight:700; }
   h1 em { font-style:normal; background:linear-gradient(90deg,var(--signal),var(--signal2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
-  .sub { margin:18px 0 0; font-size:24px; line-height:1.4; color:var(--soft); max-width:980px; }
-  .chips { margin-top:auto; display:flex; flex-wrap:wrap; gap:10px; padding-bottom:18px; }
-  .chip { font-size:18px; font-weight:700; padding:6px 14px; border-radius:20px; background:var(--signal); color:#fff; border:2px solid var(--signal); }
+  .sub { margin:16px 0 0; font-size:21px; line-height:1.45; color:var(--soft); }
+  .chips { margin-top:auto; display:flex; flex-wrap:wrap; gap:10px; padding-bottom:4px; }
+  .chip { font-size:17px; font-weight:700; padding:6px 13px; border-radius:20px; background:var(--signal); color:#fff; border:2px solid var(--signal); }
   .chip.g { background:#fff; color:var(--deep); border:2px solid var(--hair); }
+
+  .right { flex:1; display:flex; align-items:center; justify-content:center; }
+  .diagram { position:relative; width:460px; height:340px; }
+  .dcap { position:absolute; top:0; left:0; right:0; text-align:center; font-family:var(--mono); font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--soft); }
+  .dbox { position:absolute; border:2px solid var(--hair); border-radius:12px; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+  .dbox b { font-size:19px; font-weight:700; color:var(--ink); }
+  .dbox span { font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--soft); margin-top:3px; }
+  .api { top:30px; left:50%; width:230px; height:64px; transform:translateX(-50%); border-color:var(--signal); }
+  .api b { color:var(--deep); }
+  .vline { position:absolute; background:var(--hair); }
+  .v-main { top:94px; left:50%; width:2px; height:44px; transform:translateX(-1px); }
+  .hline { position:absolute; top:138px; left:8px; right:8px; height:2px; background:var(--hair); }
+  .v-l { top:138px; left:8px; width:2px; height:40px; background:var(--hair); }
+  .v-m { top:138px; left:50%; width:2px; height:40px; background:var(--hair); transform:translateX(-1px); }
+  .v-r { top:138px; right:8px; width:2px; height:40px; background:var(--hair); }
+  .row3 { position:absolute; top:178px; left:0; right:0; display:flex; justify-content:space-between; }
+  .row3 .dbox { position:static; width:138px; height:78px; }
+  .row3 .hi { background:linear-gradient(180deg,var(--signal),var(--signal2)); border-color:var(--signal); }
+  .row3 .hi b, .row3 .hi span { color:#fff; }
+  .row3 .hi { position:relative; }
+  .dot { position:absolute; top:-6px; right:-6px; width:11px; height:11px; border-radius:50%; background:var(--accent); border:2px solid #fff; }
+
   .foot { padding-top:14px; border-top:1px solid var(--hair); display:flex; align-items:center; font-family:var(--mono); font-size:20px; color:var(--soft); }
   .foot b { color:var(--ink); }
   .foot .r { margin-left:auto; display:flex; align-items:center; gap:9px; }
-  .foot .dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--accent); }
 </style>
 </head>
 <body>
 <div class="bar"></div>
 <div class="wrap">
   <div class="top"><img src="zyvor-mark.svg" alt=""><b>Zyvor</b><span>&middot;</span><span>Kryton</span><span class="r">Windows control plane</span></div>
-  <h1>One API.<br><em>Real Windows</em> behind it.</h1>
-  <p class="sub">Provider-neutral REST + CloudEvents for Windows workloads — demo, dockur lab, or KubeVirt production without leaking backend YAML to callers. Apache-2.0.</p>
-  <div class="chips">
-    <span class="chip">Stable UUIDs</span>
-    <span class="chip">API keys + SSE</span>
-    <span class="chip g">demo → dockur → kubevirt</span>
-    <span class="chip g">Operator UI</span>
-    <span class="chip g">No Windows media shipped</span>
+  <div class="body">
+    <div class="left">
+      <h1>One API.<br><em>Real Windows</em> behind it.</h1>
+      <p class="sub">Provider-neutral REST + CloudEvents for Windows workloads — demo, dockur lab, or KubeVirt production without leaking backend YAML to callers. Apache-2.0.</p>
+      <div class="chips">
+        <span class="chip">Stable UUIDs</span>
+        <span class="chip">API keys + SSE</span>
+        <span class="chip g">Operator UI</span>
+        <span class="chip g">No Windows media shipped</span>
+      </div>
+    </div>
+    <div class="right">
+      <div class="diagram">
+        <div class="dcap">One contract, three providers</div>
+        <div class="dbox api"><b>Kryton API</b><span>REST + CloudEvents</span></div>
+        <div class="vline v-main"></div>
+        <div class="hline"></div>
+        <div class="vline v-l"></div>
+        <div class="vline v-m"></div>
+        <div class="vline v-r"></div>
+        <div class="row3">
+          <div class="dbox"><b>demo</b><span>in-memory</span></div>
+          <div class="dbox"><b>dockur</b><span>lab</span></div>
+          <div class="dbox hi"><b>kubevirt</b><span>GA</span><i class="dot"></i></div>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="foot"><span><b>zyvor.dev/kryton</b></span><span class="r"><span class="dot"></span>Go 1.23+ &middot; Apache-2.0</span></div>
+  <div class="foot"><span><b>zyvor.dev/kryton</b></span><span class="r">Go 1.23+ &middot; Apache-2.0</span></div>
 </div>
 </body>
 </html>
