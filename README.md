@@ -5,11 +5,17 @@
 [![Go](https://img.shields.io/badge/Go-1.23+-0071e3?style=flat-square&labelColor=1d1d1f&logo=go&logoColor=white)](https://go.dev/)
 [![Go Reference](https://pkg.go.dev/badge/github.com/zyvorai/kryton.svg)](https://pkg.go.dev/github.com/zyvorai/kryton)
 
+[![Book a demo](https://img.shields.io/badge/Book_a_demo-0071e3?style=for-the-badge)](https://zyvor.dev/schedule?utm_source=github&utm_medium=kryton&utm_campaign=readme_hero)
+[![30-day PoC](https://img.shields.io/badge/30--day_PoC-1d1d1f?style=for-the-badge)](https://zyvor.dev/poc?utm_source=github&utm_medium=kryton&utm_campaign=readme_hero)
+
+[![Book a demo](https://img.shields.io/badge/Book_a_demo-0071e3?style=for-the-badge)](https://zyvor.dev/schedule?utm_source=github&utm_medium=kryton&utm_campaign=readme_hero)
+[![30-day PoC](https://img.shields.io/badge/30--day_PoC-1d1d1f?style=for-the-badge)](https://zyvor.dev/poc?utm_source=github&utm_medium=kryton&utm_campaign=readme_hero)
+
 ![Kryton — one API, real Windows behind it](docs/social/kryton-share-card.png)
 
 **One stable machine API. Real Windows behind the provider boundary.**
 
-📖 **[User guide](docs/USER-GUIDE.md)** · **[Product docs](https://zyvor.dev/docs/kryton)** · **[API](docs/API.md)** · **[GA checklist](docs/GA.md)**
+📖 **[User guide](docs/USER-GUIDE.md)** · **[Product docs](https://zyvor.dev/docs/kryton?utm_source=github&utm_medium=kryton&utm_campaign=readme_hero)** · **[API](docs/API.md)** · **[GA checklist](docs/GA.md)**
 
 Kryton is an Apache-2.0 control plane for Windows workloads. Portals, CI, and automation talk to one REST + CloudEvents contract whether the backend is an in-memory **demo**, real Windows via **[dockur/windows](https://github.com/dockur/windows)** on a lab host, or **KubeVirt** on Kubernetes. It is not a Windows installer, activation service, or raw KubeVirt YAML factory.
 
@@ -158,4 +164,8 @@ Share cards: `./docs/social/build-social-card.sh`
 
 ## License
 
-Apache-2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE). Enterprise: [sales@zyvor.dev](mailto:sales@zyvor.dev) · [zyvor.dev](https://zyvor.dev).
+Apache-2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE). Enterprise: [sales@zyvor.dev](mailto:sales@zyvor.dev) · [zyvor.dev](https://zyvor.dev/?utm_source=github&utm_medium=kryton&utm_campaign=readme_footer).
+
+Book a [demo](https://zyvor.dev/schedule?utm_source=github&utm_medium=kryton&utm_campaign=readme_footer) or start a [30-day PoC](https://zyvor.dev/poc?utm_source=github&utm_medium=kryton&utm_campaign=readme_footer). Fallback: [sales@zyvor.dev](mailto:sales@zyvor.dev).
+
+Book a [demo](https://zyvor.dev/schedule?utm_source=github&utm_medium=kryton&utm_campaign=readme_footer) or start a [30-day PoC](https://zyvor.dev/poc?utm_source=github&utm_medium=kryton&utm_campaign=readme_footer). Fallback: [sales@zyvor.dev](mailto:sales@zyvor.dev).
