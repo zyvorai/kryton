@@ -164,6 +164,8 @@ Share cards: `./docs/social/build-social-card.sh`
 
 ## License
 
+Commercial subscriptions and support: see [docs/SUBSCRIPTION-MODEL.md](docs/SUBSCRIPTION-MODEL.md).
+
 Apache-2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE). Enterprise: [sales@zyvor.dev](mailto:sales@zyvor.dev) · [zyvor.dev](https://zyvor.dev/?utm_source=github&utm_medium=kryton&utm_campaign=readme_footer).
 
 Book a [demo](https://zyvor.dev/schedule?utm_source=github&utm_medium=kryton&utm_campaign=readme_footer) or start a [30-day PoC](https://zyvor.dev/poc?utm_source=github&utm_medium=kryton&utm_campaign=readme_footer). Fallback: [sales@zyvor.dev](mailto:sales@zyvor.dev).
